@@ -40,7 +40,7 @@ http://latex.codecogs.com/gif.latex?d=\frac{|-x_1y_2+x_2y_1|}{\sqrt{(x_2-x_1)^2+
 ![equation](http://latex.codecogs.com/gif.latex?d%3D%5Cfrac%7B%7C-x_1y_2%2Bx_2y_1%7C%7D%7B%5Csqrt%7B%28x_2-x_1%29%5E2%2B%28y_2-y_1%29%5E2%7D%7D)
 
 This is unfortunate because the denominator can become `0` if we happen to compare a point with itself! We do not 
-care so much about the distance to the origin for these points, but they should blow up suddenly to infinity. It can
+care so much about the distance to the origin for these points, but they should not blow up suddenly to infinity. It can
 be solved easily by realizing that we can rotate the two points on our estimated line around the origin! By rotating
 the points exactly by the estimated angle, we will have a horizontal line which will always pass through the `y`-axis.
 Not only that, `|y|` is exactly the distance with the origin we are after. To see that you will have draw a few example
