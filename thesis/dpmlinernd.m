@@ -64,36 +64,32 @@ lp=zeros(dim,S);
 lp_covar=zeros(dim,dim,S);
 P=zeros(n,dim);
 
+% We sample for each component from two different latent spaces. One corresponding to the center of a line segment, the
+% other corresponding to its angle and length.
+
 % For each cluster we get a new "mean" vector and "covariance" matrix for the center of the line segment.
-% For each cluster we also get a new "mean" vector and "covariance" matrix for one endpoint of the same line segment.
+% For each cluster we also get a new "mean" vector and "covariance" matrix for each (angle, segment size)
 for i=1:S
 	% We get a mean and covariance matrix at once through the normal-inverse Wishart random generator
 	[mu(:,i) covar(:,:,i)]=normalinvwishrnd(hyper);
+
 	% We get a mean and covariance matrix for the endpoint, but will throw away the covariance matrix later
+	% This needs attention! The proper prior for an angle is different!
 	[lp(:,i) lp_covar(:,:,i)]=normalinvwishrnd(hyper);
 
 	% Same angle
-	%lp(:,i) = [pi ; lp(2,i)];
+	if (test_same_angle)
+		lp(:,i) = [same_angle ; lp(2,i)];
+	endif
 	
 	% Same length
-	lp(:,i) = [lp(1,i); 4];
+	if (test_same_length)
+		lp(:,i) = [lp(1,i); same_length];
+	endif
 end
 
 % For each pair of (angle,distance) calculate end point
 lp(:,:)=[ (lp(2,:).*cos(lp(1,:))); (lp(2,:).*sin(lp(1,:)))];
-
-
-% Remark: the way the line segments are build up in this way does not lend itself to a prior that for example puts 
-% emphasis on vertical or horizontal lines above lines in other directions. For that to exist, it is important to have
-% the angle explicitly incorporated in the generative process.
-
-% The use of a Gaussian Process to generate a function is actually to get an independent Gaussian into the game.
-% A linear function with points distributed in a Gaussian fashion over it. Is just not the same as generating everything 
-% from a 4D Gaussian with dimensions (center (2D), length (1D), angle (1D)). The points on the same line correspond to
-% exactly the same center, angle, length parameters and the noise is only in the observation space, not in the 
-% parameter space. In the parameter space is it is uncertainty, not noise. The uncertainty is represented by a uniform
-% distribution of center, angle, and length (limited by the size of the image). The noise is represented by a normal
-% distribution.
 
 % Plot some stuff for debugging purposes, only use if you have a few clusters
 if (plot_avg_cov)
@@ -103,21 +99,26 @@ if (plot_avg_cov)
 	covar
 end
 
+% Here we 
+
 % Loop over all data items 
 for i=1:n
 	% Get the cluster id (which is the partition index)
 	c=partitions(i);
 
-	% The end of the line (lp) compared to the mean is taken negative as well as positive to form a line segment
-
+	% Line distribution
 	switch (noise_distribution) 
 	case "normal"
 		% points on line segment are generated normally
-		P(i,:)=mu(:,c) + lp(:,c)*randn(1) + chol(covar(:,:,c))' * randn(dim,1);
+		sn=randn(1);
 	case "uniform"
+		sn=2*rand(1)-1;
 		% points on line segment are generated uniformly
-		P(i,:)=mu(:,c) + lp(:,c)*(2*rand(1)-1) + chol(covar(:,:,c))' * randn(dim,1);
 	endswitch
+
+	% We use a multiplicative structure to pick a point on the line segment
+	% The end of the line (lp) compared to the mean is taken negative as well as positive to form a line segment
+	P(i,:)=mu(:,c) + lp(:,c)*sn + chol(covar(:,:,c))' * randn(dim,1);
 end
 
 P=P';
