@@ -6,7 +6,7 @@
 n=10;
 
 show_plots=true;
-config_use_noise=0;
+config_use_noise=1;
 test_introduce_outliers=1;
 test_outliers_low_weight=1; % if outliers have the same weight, they screw up everything!
 compare_deming=1;
@@ -65,8 +65,8 @@ endif
 % for now weight everything just as much, except point 1 and 2
 weights=ones(n,1)*1;
 if (test_outliers_low_weight)
-	weights(1)=0.02;
-	weights(2)=0.02;
+	weights(1)=0.1;
+	weights(2)=0.1;
 endif
 total_weight=sum(weights);
 
@@ -136,6 +136,7 @@ if (show_plots)
 
 	% plot the points themselves
 	plot(pnts(:,1), pnts(:,2), '*5');
+	%plot(pnts(:,1), pnts(:,2), 'ro', "markersize",10, "linewidth",3);
 	hold on;
 	
 	% plot the average

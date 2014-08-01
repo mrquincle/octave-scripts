@@ -11,12 +11,12 @@ test_calculate_angle_first_two_points=0;
 print_parameters=1;
 
 test_line_estimation=1;
-test_introduce_outlier=0;
+test_introduce_outlier=1;
 do_threshold_weights=1;
 plot_points=0;
-plot_distance_angle=0;
+plot_distance_angle=1;
 plot_weighted_points=1;
-plot_shifted_weighted_points=0;
+plot_shifted_weighted_points=1;
 
 % number of samples
 n=40;
@@ -184,6 +184,7 @@ if (plot_points)
 	ylabel('angle with origin')
 	axis('square')
 	axis('equal')
+	
 endif
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -254,3 +255,18 @@ if (test_line_estimation)
 
 	% TODO: check, it seems refactoring introduced a negative sign in b0
 endif
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Frequency spectrum
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% It might be interesting to observe a histogram. Take all the points and calculate their distance to the line. Then
+% create a histogram in which points are divided over distance intervals.
+%hist(dpnts, 30);
+
+
+% This is especially interesting with respect to "wrong" lines. How do the residuals show up, and more important, how 
+% to move towards a better fit!?
+
+
+
