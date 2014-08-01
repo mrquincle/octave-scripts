@@ -99,7 +99,10 @@ if (plot_avg_cov)
 	covar
 end
 
-% Here we 
+% Here we generate points on the line segment according to a certain distribution. Moreover, we use the covariance
+% from the inverse Wishart to account for the spread around that point picked on the line segment. Note that if 
+% picking a point from a line segment is from a normal distribution, this is not done properly yet. For starters
+% points can be beyond the end of the line segment with probability > 0.
 
 % Loop over all data items 
 for i=1:n
@@ -112,8 +115,8 @@ for i=1:n
 		% points on line segment are generated normally
 		sn=randn(1);
 	case "uniform"
-		sn=2*rand(1)-1;
 		% points on line segment are generated uniformly
+		sn=2*rand(1)-1;
 	endswitch
 
 	% We use a multiplicative structure to pick a point on the line segment
