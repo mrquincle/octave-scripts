@@ -26,6 +26,12 @@ Frames can be added by an additional random probability which picks on of the li
 
 It is now clear as day that there are correlations between the lines, namely they are "glued together" in the form of squares. This is pretty hard to do if you do not start from the representation of a square.
 
+<p align="center">
+<img src="pictures/cubes.png?raw=true" alt="Man-made generation of cubes" height="500px"/>
+</p>
+
+Something resembling wireframes can be seen in this picture. There are no conditions that prevent cubes from intersection. This does not need to be an immediate problem, intersecting boxes might be seen as a composed object. However, in the end, we probably would like to be able to formulate conditions such as boxes are likely to be stacked on top of each other, and other macro-object constraints that have to do with gravity and volumetric exclusion.
+
 ## Inference
 
 Currently, no inference is done. However, what I will do first is simple Gibbs sampling. After that I will develop an inference method that makes use of the hierarchical structure in the model.

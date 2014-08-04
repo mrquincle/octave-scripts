@@ -67,6 +67,7 @@ lp1=zeros(dim,S);
 lp1_covar=zeros(dim,dim,S);
 lp2=zeros(dim,S);
 lp2_covar=zeros(dim,dim,S);
+lp3=zeros(dim,S);
 P=zeros(n,dim);
 
 % We add an additional CRP to get the same angle for line segments with a probability larger than 0, indicating 
@@ -112,15 +113,29 @@ case 2
 	lp2(:,:)=[ 	(ls(3,:).*cos(ls(1,:)+pi/2 )); 
 			(ls(3,:).*sin(ls(1,:)+pi/2 ))];
 case 3
-	% We assume order (theta, phi, r1, r2, alpha2)
-	% We now move a point 
-	lp1(:,:)=[ 	(ls(3,:).*sin(ls(2,:)).*cos(ls(1,:))); 
-			(ls(3,:).*sin(ls(2,:)).*sin(ls(1,:))); 
-			(ls(3,:).*cos(ls(2,:)))];
-	lp2(:,:)=[ 	(ls(4,:).*sin(ls(2,:)).*cos(ls(1,:)+pi/2)); 
-			(ls(4,:).*sin(ls(2,:)).*sin(ls(1,:)+pi/2)); 
-			(ls(4,:).*cos(ls(2,:)))];
-	%lp3(:,:)=[ (ls(3,:).*sin(ls(2,:)).*cos(ls(1,:))); (ls(3,:).*sin(ls(2,:)).*sin(ls(1,:))); (ls(3,:).*cos(ls(2,:)))];
+	switch (object_dim) 
+	case 3
+		% We assume order (theta, phi, r1, r2, r3, alpha2, alpha2)
+		% We now move a point 
+		lp1(:,:)=[ 	(ls(3,:).*sin(ls(2,:)).*cos(ls(1,:))); 
+				(ls(3,:).*sin(ls(2,:)).*sin(ls(1,:))); 
+				(ls(3,:).*cos(ls(2,:)))];
+		lp2(:,:)=[ 	(ls(4,:).*sin(ls(2,:)).*cos(ls(1,:)+pi/2)); 
+				(ls(4,:).*sin(ls(2,:)).*sin(ls(1,:)+pi/2)); 
+				(ls(4,:).*cos(ls(2,:)))];
+		lp3(:,:)=[ 	(ls(5,:).*sin(ls(2,:)+pi/2).*cos(ls(1,:))); 
+				(ls(5,:).*sin(ls(2,:)+pi/2).*sin(ls(1,:))); 
+				(ls(5,:).*cos(ls(2,:)+pi/2))];
+	case 2
+		% We assume order (theta, phi, r1, r2, alpha2)
+		% We now move a point 
+		lp1(:,:)=[ 	(ls(3,:).*sin(ls(2,:)).*cos(ls(1,:))); 
+				(ls(3,:).*sin(ls(2,:)).*sin(ls(1,:))); 
+				(ls(3,:).*cos(ls(2,:)))];
+		lp2(:,:)=[ 	(ls(4,:).*sin(ls(2,:)).*cos(ls(1,:)+pi/2)); 
+				(ls(4,:).*sin(ls(2,:)).*sin(ls(1,:)+pi/2)); 
+				(ls(4,:).*cos(ls(2,:)))];
+	endswitch
 endswitch
 
 % Plot some stuff for debugging purposes, only use if you have a few clusters
@@ -145,22 +160,40 @@ for i=1:n
 	switch (noise_distribution) 
 	case "normal"
 		% points on line segment are generated normally
-		sn=randn(1,2);
+		sn=randn(1,object_dim);
 	case "uniform"
 		% points on line segment are generated uniformly
-		sn=2*rand(1,2)-1;
+		sn=2*rand(1,object_dim)-1;
 	endswitch
 
 	if (extremes_only) 
-		% We set one of the coordinates to 1 or -1 with a certain probability
-		pl1=(rand(1)>0.5)+1;
-		pl2=2*(rand(1)>0.5)-1;
-		sn(pl1)=pl2;
+		% We set all the coordinates to 1 or -1 with a certain probability except for one
+		%pl1=(rand(1)>0.5)+1;
+
+		% create select mask for which one will not be altered, say (0, 1, 0)
+		plA=zeros(1,object_dim);
+		plA(unidrnd(object_dim))=1;
+		% create select mask for the +1/-1 items, (1, 0, 1)
+		plB=1-plA;
+		% calculate +1/-1 items, so we get mask (-1, 0, +1)
+		plB=plB.*((rand(1,object_dim)>0.5)*2-1);
+
+		% apply both masks
+		sn=sn.*plA+plB;
+		%plA=unidrnd(dim);
+		%plB=2*(rand(1)>0.5)-1;
+		%sn(plA)=plB;
+		%if (enable_cubes)
 	endif
 
 	% We use a multiplicative structure to pick a point on the line segment
 	% The end of the line (lp) compared to the mean is taken negative as well as positive to form a line segment
-	P(i,:)=mu(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + chol(covar(:,:,c))' * randn(dim,1);
+	switch (object_dim)
+	case 2
+		P(i,:)=mu(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + chol(covar(:,:,c))' * randn(dim,1);
+	case 3
+		P(i,:)=mu(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + lp3(:,c)*sn(3) + chol(covar(:,:,c))' * randn(dim,1);
+	endswitch
 end
 
 P=P';
