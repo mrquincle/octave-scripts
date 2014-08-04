@@ -12,7 +12,9 @@ The figure does of course not resemble something you recognize, but you see that
 
 It is not so sophisticated to extends this to 2D parallelograms.
 
-<img src="pictures/patches.png?raw=true" alt="Man-made generation of patches" height="100px"/>
+<center>
+<img src="pictures/patches.png?raw=true" alt="Man-made generation of patches" height="300px"/>
+</center>
 
 These patches do not resemble 3D wireframes, but you see that this is in the right direction.
 
