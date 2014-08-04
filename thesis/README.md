@@ -10,6 +10,16 @@ As an example of a model that generates lines according to a Hierarchical Dirich
 
 The figure does of course not resemble something you recognize, but you see that this might be a nice starting point for inference if our inference method starts reasoning with this type structure in mind.
 
+It is not so sophisticated to extends this to 2D parallelograms.
+
+![patches](pictures/patches.png?raw=true "Man-made generation of patches")
+
+These patches do not resemble 3D wireframes, but you see that this is in the right direction.
+
+## Inference
+
+Currently, no inference is done. However, what I will do first is simple Gibbs sampling. After that I will develop an inference method that makes use of the hierarchical structure in the model.
+
 ## Copyrights
 
 * Author: Anne van Rossum
