@@ -18,6 +18,14 @@ It is not so sophisticated to extends this to 2D parallelograms.
 
 These patches do not resemble 3D wireframes, but you see that this is in the right direction.
 
+Frames can be added by an additional random probability which picks on of the lines corresponding to the patch, this can be turned on by using `extremes_only` in the `dpmsquare1.config` file.
+
+<p align="center">
+<img src="pictures/frames.png?raw=true" alt="Man-made generation of frames" height="500px"/>
+</p>
+
+It is now clear as day that there are correlations between the lines, namely they are "glued together" in the form of squares. This is pretty hard to do if you do not start from the representation of a square.
+
 ## Inference
 
 Currently, no inference is done. However, what I will do first is simple Gibbs sampling. After that I will develop an inference method that makes use of the hierarchical structure in the model.

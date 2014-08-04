@@ -151,6 +151,13 @@ for i=1:n
 		sn=2*rand(1,2)-1;
 	endswitch
 
+	if (extremes_only) 
+		% We set one of the coordinates to 1 or -1 with a certain probability
+		pl1=(rand(1)>0.5)+1;
+		pl2=2*(rand(1)>0.5)-1;
+		sn(pl1)=pl2;
+	endif
+
 	% We use a multiplicative structure to pick a point on the line segment
 	% The end of the line (lp) compared to the mean is taken negative as well as positive to form a line segment
 	P(i,:)=mu(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + chol(covar(:,:,c))' * randn(dim,1);
