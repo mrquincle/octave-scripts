@@ -13,10 +13,26 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Goal
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% This specific file has as goal to come up with some method to introduce regular spacing as often seen in man-made
+% environments. For example the windows in a flat are regularly spaced. This structure exists in the "head of the 
+% designer" and reflect engineering principles of building robustly and affordably.
+
+% The way we incorporate this concept is by introducing yet another layer of "spacing objects", which can be seen as
+% the facade of a building for example, but calling it like that is just for our convenience. The inference method
+% will just have a way to collect spatially regular items. 
+
+% We first choose a "type" and then we choose a "spacing object". This means that different types can still intersect
+% each other. And even intersection of spacing objects of the same type is possible.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load configuration from file
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-fname="dpmsquare1";
+fname="dpmregular1";
 config_dir="config";
 
 data_dir="data";
@@ -80,6 +96,7 @@ printf("Number of super clusters: %i\n", SC);
 s_mu=zeros(hyper1.dim,SC);
 s_covar=zeros(hyper1.dim,hyper1.dim,SC);
 
+% Pick the properties of the objects
 for i=1:SC
 	[s_mu(:,i) s_covar(:,:,i)]=normalinvwishrnd(hyper1);
 end
