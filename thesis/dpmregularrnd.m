@@ -36,7 +36,6 @@ fname="dpmregular1";
 config_dir="config";
 
 data_dir="data";
-% Create data directory
 mkdir(data_dir);
 
 input_file=[config_dir "/" fname ".config"];
@@ -59,14 +58,17 @@ addpath("/home/anne/myworkspace/octave/nonparam_workshop/private")
 % Run process
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Generate items from a CRP to model a statistic process on hierarchy level 0
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % We run a Chinese Restaurant Process (CRP) for n items resulting a Dirichlet Process (DP) distribution. This is a 
 % function that calculates the probabilities for all items in a batch. So, we run it only once. The resulting partition 
 % is fixed.
-[partitions clustersize clusters partition_bins] = crprnd(alpha,n);
+[h0_p h0_cs h0_c h0_pb] = crprnd(hyper0.alpha,n);
 
 % This means there is a fixed number of clusters rolling out of the CRP process above.
-S=clusters;
-printf("Number of clusters: %i\n", S);
+printf("Number of clusters on level 0: %i\n", h0_c);
 
 % Initialize the parameters to the right dimensions
 %  mu: mean
@@ -74,66 +76,110 @@ printf("Number of clusters: %i\n", S);
 %  lp: line endpoint
 %  lp_covar: not used
 %  P: points on the calculated line segment
-mu=zeros(dim,S);
-covar=zeros(dim,dim,S);
+mu=zeros(hyper0.dim,h0_c);
+covar=zeros(hyper0.dim,hyper0.dim,h0_c);
 
-ls=zeros(hyper1.dim,S);
+ls=zeros(hyper1.dim,h0_c);
+lg=zeros(hyper2.dim,h0_c);
 
-lp1=zeros(dim,S);
-lp1_covar=zeros(dim,dim,S);
-lp2=zeros(dim,S);
-lp2_covar=zeros(dim,dim,S);
-lp3=zeros(dim,S);
-P=zeros(n,dim);
+lp1=zeros(hyper0.dim,h0_c);
+lp1_covar=zeros(hyper0.dim,hyper0.dim,h0_c);
+lp2=zeros(hyper0.dim,h0_c);
+lp2_covar=zeros(hyper0.dim,hyper0.dim,h0_c);
+lp3=zeros(hyper0.dim,h0_c);
+P=zeros(n,hyper0.dim);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Generate items from a CRP to model a statistic process on hierarchy level 1
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % We add an additional CRP to get the same angle for line segments with a probability larger than 0, indicating 
 % correlations coming from higher-level objects, such as squares and alike.
-[s_p s_cs s_c s_pb] = crprnd(alpha1,S);
-SC=s_c;
-printf("Number of super clusters: %i\n", SC);
+[h1_p h1_cs h1_c h1_pb] = crprnd(hyper1.alpha, h0_c);
+printf("Number of clusters on level 1: %i\n", h1_c);
 
 % Normally distributed
-s_mu=zeros(hyper1.dim,SC);
-s_covar=zeros(hyper1.dim,hyper1.dim,SC);
+h1_mu=zeros(hyper1.dim, h1_c);
+h1_covar=zeros(hyper1.dim, hyper1.dim, h1_c);
 
 % Pick the properties of the objects
-for i=1:SC
-	[s_mu(:,i) s_covar(:,:,i)]=normalinvwishrnd(hyper1);
+for i=1:h1_c
+	[h1_mu(:,i) h1_covar(:,:,i)]=normalinvwishrnd(hyper1);
 end
 
-% We sample for each component from two different latent spaces. One corresponding to the center of a line segment, the
-% other corresponding to its angle and length.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Generate items from a CRP to model a statistic process on hierarchy level 2
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% For each cluster we get a new "mean" vector and "covariance" matrix for the center of the line segment.
-% For each cluster we also get a new "mean" vector and "covariance" matrix for each (angle, segment size)
-for i=1:S
+[h2_p h2_cs h2_c h2_pb] = crprnd(hyper2.alpha, h1_c);
+printf("Number of clusters on level 2: %i\n", h2_c);
+
+% Normally distributed
+h2_mu=zeros(hyper2.dim, h2_c);
+h2_covar=zeros(hyper2.dim, hyper2.dim, h2_c);
+
+% Pick the properties of the objects on this level
+for i=1:h2_c
+	[h2_mu(:,i) h2_covar(:,:,i)]=normalinvwishrnd(hyper2);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% We sample for each component from two different latent spaces. One corresponding to the center of an object, the
+% other corresponding to its properties. 
+
+% In the case of a line segment, this is the orientation of the line and the size of the segment. In the case of a
+% parallelogram the vector "ls" should be larger and contains additional parameters to specify such a more complex
+% object.
+
+for i=1:h0_c
 	% We get a mean and covariance matrix at once through the normal-inverse Wishart random generator
-	[mu(:,i) covar(:,:,i)]=normalinvwishrnd(hyper);
+	[mu(:,i) covar(:,:,i)]=normalinvwishrnd(hyper0);
 
-	% We get a mean and covariance matrix for the endpoint, but will throw away the covariance matrix later
-	% This needs attention! The proper prior for an angle is different!
-	%[lp(:,i) lp_covar(:,:,i)]=normalinvwishrnd(hyper);
+	% Get the cluster id
+	h1_ci = h1_p(i);
+	% Get the necessary parameter values for our object (same for all objects in this cluster)
+	ls(:,i)=h1_mu(:,h1_ci);
 
-	% Get the super-cluster
-	sc = s_p(i);
-	% Get the angle and two lengths for 2D, get three angles and two lengths for 3D
-	ls(:,i)=s_mu(:,sc);
+	% Get the grid parameters
+	h2_ci = h2_p(h1_ci);
+	lg(:,i)=h2_mu(:,h2_ci);
 end
 
-% For each pair of (angle,distance) calculate end point
-switch(dim) 
+% Calculate important points of the object to be drawn. For a line segment this is a single point, which is subsequentl
+% used together with the mean \mu to draw a line segment. The other end of the segment does not need to be calculated 
+% because the points will be drawn from \mu-lp1 to \mu+lp1 (so the point is "mirrored" over the mean point). Hence, the
+% point is not an absolute position, but relative. This makes it easier to create objects from the same size.
+% The other objects, parallelograms, cubes, etc. are created similarly.
+switch(hyper0.dim) 
 case 2
-	% We assume order (angle, length1, length2), we make a "square" from it, actually a parallelogram by picking two
-	% other points. Then all points will be between the middle \mu and points \mu+-lp1 and \mu+-lp2.
-	lp1(:,:)=[ 	(ls(2,:).*cos(ls(1,:))); 
-			(ls(2,:).*sin(ls(1,:)))];
-	lp2(:,:)=[ 	(ls(3,:).*cos(ls(1,:)+pi/2 )); 
-			(ls(3,:).*sin(ls(1,:)+pi/2 ))];
+	switch (object_dim) 
+	case 1
+		% Assumed order in "ls" vector: (angle, distance)
+		lp1(:,:)=[ 	(ls(2,:).*cos(ls(1,:))); 
+				(ls(2,:).*sin(ls(1,:)))];
+	case 2
+		% We assume order (angle, length1, length2), we make a "square" from it, actually a parallelogram by picking two
+		% other points. Then all points will be between the middle \mu and points \mu+-lp1 and \mu+-lp2.
+		lp1(:,:)=[ 	(ls(2,:).*cos(ls(1,:))); 
+				(ls(2,:).*sin(ls(1,:)))];
+		lp2(:,:)=[ 	(ls(3,:).*cos(ls(1,:)+pi/2 )); 
+				(ls(3,:).*sin(ls(1,:)+pi/2 ))];
+	endswitch
 case 3
 	switch (object_dim) 
+	case 2
+		% We assume order (theta, phi, r1, r2, alpha2)
+		lp1(:,:)=[ 	(ls(3,:).*sin(ls(2,:)).*cos(ls(1,:))); 
+				(ls(3,:).*sin(ls(2,:)).*sin(ls(1,:))); 
+				(ls(3,:).*cos(ls(2,:)))];
+		lp2(:,:)=[ 	(ls(4,:).*sin(ls(2,:)).*cos(ls(1,:)+pi/2)); 
+				(ls(4,:).*sin(ls(2,:)).*sin(ls(1,:)+pi/2)); 
+				(ls(4,:).*cos(ls(2,:)))];
 	case 3
 		% We assume order (theta, phi, r1, r2, r3, alpha2, alpha2)
-		% We now move a point 
 		lp1(:,:)=[ 	(ls(3,:).*sin(ls(2,:)).*cos(ls(1,:))); 
 				(ls(3,:).*sin(ls(2,:)).*sin(ls(1,:))); 
 				(ls(3,:).*cos(ls(2,:)))];
@@ -143,15 +189,6 @@ case 3
 		lp3(:,:)=[ 	(ls(5,:).*sin(ls(2,:)+pi/2).*cos(ls(1,:))); 
 				(ls(5,:).*sin(ls(2,:)+pi/2).*sin(ls(1,:))); 
 				(ls(5,:).*cos(ls(2,:)+pi/2))];
-	case 2
-		% We assume order (theta, phi, r1, r2, alpha2)
-		% We now move a point 
-		lp1(:,:)=[ 	(ls(3,:).*sin(ls(2,:)).*cos(ls(1,:))); 
-				(ls(3,:).*sin(ls(2,:)).*sin(ls(1,:))); 
-				(ls(3,:).*cos(ls(2,:)))];
-		lp2(:,:)=[ 	(ls(4,:).*sin(ls(2,:)).*cos(ls(1,:)+pi/2)); 
-				(ls(4,:).*sin(ls(2,:)).*sin(ls(1,:)+pi/2)); 
-				(ls(4,:).*cos(ls(2,:)))];
 	endswitch
 endswitch
 
@@ -171,7 +208,7 @@ end
 % Loop over all data items 
 for i=1:n
 	% Get the cluster id (which is the partition index)
-	c=partitions(i);
+	c=h0_p(i);
 
 	% Line distribution
 	switch (noise_distribution) 
@@ -185,7 +222,6 @@ for i=1:n
 
 	if (extremes_only) 
 		% We set all the coordinates to 1 or -1 with a certain probability except for one
-		%pl1=(rand(1)>0.5)+1;
 
 		% create select mask for which one will not be altered, say (0, 1, 0)
 		plA=zeros(1,object_dim);
@@ -197,25 +233,35 @@ for i=1:n
 
 		% apply both masks
 		sn=sn.*plA+plB;
-		%plA=unidrnd(dim);
-		%plB=2*(rand(1)>0.5)-1;
-		%sn(plA)=plB;
-		%if (enable_cubes)
 	endif
 
+	% Transform grid parameters in shift operator for points
+	dx=lg(1,c);
+	dy=lg(2,c);
+	nx=floor(abs(lg(3,c))+1);
+	ny=floor(abs(lg(4,c))+1);
+	dx=dx*4;
+	dy=dy*4;
+	nx = 3; ny = 3;
+	nxi=unidrnd(nx);
+	nyi=unidrnd(ny);
+	gp(:,c) = [dx * nxi; dy * nyi ];
+	
 	% We use a multiplicative structure to pick a point on the line segment
 	% The end of the line (lp) compared to the mean is taken negative as well as positive to form a line segment
 	switch (object_dim)
+	case 1
+		P(i,:)=mu(:,c) + lp1(:,c)*sn + chol(covar(:,:,c))' * randn(hyper0.dim,1);
 	case 2
-		P(i,:)=mu(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + chol(covar(:,:,c))' * randn(dim,1);
+		P(i,:)=mu(:,c) + gp(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + chol(covar(:,:,c))' * randn(hyper0.dim,1);
 	case 3
-		P(i,:)=mu(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + lp3(:,c)*sn(3) + chol(covar(:,:,c))' * randn(dim,1);
+		P(i,:)=mu(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + lp3(:,c)*sn(3) + chol(covar(:,:,c))' * randn(hyper0.dim,1);
 	endswitch
 end
 
 P=P';
 
-switch (dim)
+switch (hyper0.dim)
 case 2
 	% In the 2D case we plot a bit more, e.g. the "true" lines that generate the points as well as the mean values.
 	plot(P(1,:),P(2,:),'.')
@@ -234,7 +280,7 @@ case 2
 	endswitch
 	plot(mu(1,:)-g*lp(1,:),mu(2,:)-g*lp(2,:),'^r');
 	plot(mu(1,:)+g*lp(1,:),mu(2,:)+g*lp(2,:),'vr');
-	for i=1:S
+	for i=1:h0_c
 		plot([mu(1,i)-f*lp(1,i); mu(1,i)+f*lp(1,i)],[mu(2,i)-f*lp(2,i), mu(2,i)+f*lp(2,i) ],'-');
 	end
 	dlmwrite(output_file, [P(1,:)' P(2,:)'], '\t', "precision", 10);
