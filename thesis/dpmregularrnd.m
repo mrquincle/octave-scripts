@@ -1,3 +1,4 @@
+#!/usr/bin/octave -qf
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % File to generate N lines with a specified number of outliers and Gaussian noise
 %
@@ -148,6 +149,10 @@ for i=1:h0_c
 	lg(:,i)=h2_mu(:,h2_ci);
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Calculate properties of the object using the generated random variables 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Calculate important points of the object to be drawn. For a line segment this is a single point, which is subsequentl
 % used together with the mean \mu to draw a line segment. The other end of the segment does not need to be calculated 
 % because the points will be drawn from \mu-lp1 to \mu+lp1 (so the point is "mirrored" over the mean point). Hence, the
@@ -192,6 +197,50 @@ case 3
 	endswitch
 endswitch
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Calculate properties of grid using the random variables
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+factor_spacing=20;
+gdx=lg(1,:)*factor_spacing;
+gdy=lg(2,:)*factor_spacing;
+gnx=floor(abs(lg(3,:))+1);
+gny=floor(abs(lg(4,:))+1);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Print some interesting information
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+printf("There are %i objects of %i types in %i grids\n", h0_c, h1_c, h2_c);
+for i=1:h0_c
+	h1_ci = h1_p(i);
+	h2_ci = h2_p(h1_ci);
+	printf("Object %i of type %i \n", i, h1_ci);
+	printf("Location: ");
+	disp(mu(:,i)');
+	printf("Object parameters: ");
+	disp(h1_mu(:,h1_ci)');
+	switch (object_dim) 
+	case 1
+		obj_size=abs(ls(2,i));
+		printf("Object size: %d\n", obj_size);
+	case 2
+		obj_size1=abs(ls(2,i));
+		obj_size2=abs(ls(3,i));
+		printf("Object size: %fx%f\n", obj_size1, obj_size2);
+	endswitch
+	printf("Grid layout: ");
+	disp(h2_mu(:,h2_ci)');
+	printf("This means a grid of %ix%i with spacing %f and %f\n", gnx(i), gny(i), gdx(i), gdy(i));
+endfor
+
+% I hate to press q or enter all the time
+fflush(stdout);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Print some other stuff
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Plot some stuff for debugging purposes, only use if you have a few clusters
 if (plot_avg_cov)
 	printf("The averages are:\n")
@@ -199,6 +248,7 @@ if (plot_avg_cov)
 	printf("And the covariance matrices:\n")
 	covar
 end
+
 
 % Here we generate points on the line segment according to a certain distribution. Moreover, we use the covariance
 % from the inverse Wishart to account for the spread around that point picked on the line segment. Note that if 
@@ -236,17 +286,11 @@ for i=1:n
 	endif
 
 	% Transform grid parameters in shift operator for points
-	dx=lg(1,c);
-	dy=lg(2,c);
-	nx=floor(abs(lg(3,c))+1);
-	ny=floor(abs(lg(4,c))+1);
-	dx=dx*4;
-	dy=dy*4;
-	nx = 3; ny = 3;
-	nxi=unidrnd(nx);
-	nyi=unidrnd(ny);
-	gp(:,c) = [dx * nxi; dy * nyi ];
-	
+	nxi=unidrnd(gnx(c));
+	nyi=unidrnd(gny(c));
+	gp(:,c) = [gdx(c) * nxi; gdy(c) * nyi ];
+
+
 	% We use a multiplicative structure to pick a point on the line segment
 	% The end of the line (lp) compared to the mean is taken negative as well as positive to form a line segment
 	switch (object_dim)
@@ -261,11 +305,20 @@ end
 
 P=P';
 
+fh=figure(1);
+
+show_arrows=false;
+
+for i=1:1
 switch (hyper0.dim)
 case 2
+	disp("Show graph");
 	% In the 2D case we plot a bit more, e.g. the "true" lines that generate the points as well as the mean values.
 	plot(P(1,:),P(2,:),'.')
-	return;
+	if (!show_arrows) 
+		disp("Break out of loop. Do not show arrows and print to file");
+		break;
+	endif
 	hold on
 	% Print mean values as a red circle
 	plot(mu(1,:),mu(2,:),'or');
@@ -291,5 +344,9 @@ case 3
 	plot3(mu(1,:),mu(2,:),mu(3,:),'or');
 	dlmwrite(output_file, [P(1,:)' P(2,:)' P(3,:)'], '\t', "precision", 10);
 endswitch
+endfor
 
-
+disp("Wait till plot has been closed");
+uiwait(fh);
+disp("Thanks for everything!");
+fflush(stdout);

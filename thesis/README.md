@@ -32,6 +32,12 @@ It is now clear as day that there are correlations between the lines, namely the
 
 Something resembling wireframes can be seen in this picture. There are no conditions that prevent cubes from intersection. This does not need to be an immediate problem, intersecting boxes might be seen as a composed object. However, in the end, we probably would like to be able to formulate conditions such as boxes are likely to be stacked on top of each other, and other macro-object constraints that have to do with gravity and volumetric exclusion.
 
+<p align="center">
+<img src="pictures/regular4.png?raw=true" alt="Show regular patterns" height="500px"/>
+</p>
+
+The incorporation of regularity is quite hard. The figure above is one of the first attempts, but this needs much more attention. There are intricate things going on between the size of the objects, the spacing of a grid, and the number of objects in a grid. Generating for example the spacing as well as the number of items along one of the dimensions of grid from one multinomial distribution leads to on average grid sizes that have too many items, say 40x100, and sizes of 30x40 "pixels" (so, also a lot of overlap).
+
 ## Inference
 
 Currently, no inference is done. However, what I will do first is simple Gibbs sampling. After that I will develop an inference method that makes use of the hierarchical structure in the model.
