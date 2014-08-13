@@ -4,7 +4,7 @@ To do inference in man-made environments which will be able to do inference in a
 
 This is a fun part of generative Bayesian methods, which brings together nice mathematical models and intuition.
 
-As an example of a model that generates lines according to a Hierarchical Dirichlet Process give and take a few tweaks you can check out [dpmobjectrnd.m](https://github.com/mrquincle/octave-scripts/blob/master/thesis/dpmobjectrnd.m). The lines are not all chosen randomly, but there is a Chinese Restaurant Process which generates a finite number of orientations and lengths for each `line type`, hereby resembling something akin to a real life process where an object might generate parallel lines with a much greater chance than if there were no higher level objects present.
+As an example of a model that generates lines according to a Hierarchical Dirichlet Process give and take a few tweaks you can check out [dpmobjectrnd.m](https://github.com/mrquincle/octave-scripts/blob/master/thesis/dpmobjectrnd.m). The lines are not all chosen randomly, but there is a Chinese Restaurant Process (CRP) which generates a finite number of orientations and lengths for each `line type`, hereby resembling something akin to a real life process where an object might generate parallel lines with a much greater chance than if there were no higher level objects present.
 
 ![manmade](pictures/manmade.png?raw=true "Man-made generation of lines")
 
@@ -40,7 +40,21 @@ The incorporation of regularity is quite hard. The figure above is one of the fi
 
 ## Inference
 
-Currently, no inference is done. However, what I will do first is simple Gibbs sampling. After that I will develop an inference method that makes use of the hierarchical structure in the model.
+To perform inference several methods can be used. One that fits especially discrete distribution is slice sampling. The following, however, is obtained through a collapsed CRP. First we show the lines we have randomly generated:
+
+<p align="center">
+<img src="pictures/lines_rnd.png?raw=true" alt="Generated lines" height="500px"/>
+</p>
+
+And here is the result from the inference process:
+
+<p align="center">
+<img src="pictures/lines_inf0.png?raw=true" alt="Inference of lines" height="500px"/>
+</p>
+
+The graphics are different because matlab is used now instead of octave. The algorithms from Caron are superslow in octave. Later on I will implement a fast inference method in C++, so this will not be the case in the near future. 
+
+The inference procedure uses the same configuration file as the generation procedure for now. So, we do not search for the hyperparameter alpha for example. This would be normally part of the inference process. Note that a generation process with a high alpha will generate many short lines as well. Therefore, for the inference process to only capture the most "salient lines" it is wise to set alpha much lower than the "true" value. This is an interesting observation in my opinion. 
 
 ## Copyrights
 
