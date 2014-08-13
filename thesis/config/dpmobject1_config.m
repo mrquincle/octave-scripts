@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Configuration file for dpmsquare.m
+% Configuration file for dpmobject.m
 %
 % Author: Anne van Rossum
 % Date: Jul, 2014
@@ -14,9 +14,9 @@
 
 plot_avg_cov = false;
 
-dim=2;
+dim=3;
 % With a higher alpha there will be more lines formed, the chance to form a new cluster will increase
-alpha=5;
+alpha=2;
 
 % mean for each cluster, D=2
 hyper.mu = zeros(dim,1);
@@ -31,34 +31,35 @@ hyper.lambda = 8*eye(dim);
 % the number of items is fixed, it is not possible to get another item in an incremental fashion using this generator
 n=2000;
 
-% A larger value for alpha1 means more different types of lines
-% The dimension is now (alpha1, length1, length2) for 2D, and (alpha1, alpha2, length1, length2) for 3D
+% A larger value for param1.alpha means more different types of lines
+% The dimension is now (param1.alpha, length1, length2) for 2D, and (param1.alpha, alpha2, length1, length2) for 3D
 switch (dim)
 case 2
-	hyper1.dim=dim+1;
+	param1.dim=dim+1;
 case 3
-	hyper1.dim=dim+2;
-endswitch
+	param1.dim=dim+2;
+end
 
-# A line is a 2D object, set to 2 in that case!
-object_dim=2;
+% A line is a 2D object, set to 2 in that case!
+object_dim=3;
 switch (object_dim)
 case 3
 	if (dim == 2) 
-		error ("It does not make sense to try to generate 3D objects in a 2D world")
-	endif
-	hyper1.dim += 1;
-endswitch
+		error ('It does not make sense to try to generate 3D objects in a 2D world')
+	end
+	param1.dim = param1.dim + 1;
+end
 
-alpha1=1;
-hyper1.mu = zeros(hyper1.dim,1);
+param1.alpha=1;
+
+hyper1.mu = zeros(param1.dim,1);
 hyper1.kappa = 0.001;
-hyper1.nu = hyper1.dim+1;
-hyper1.lambda = 1*eye(hyper1.dim);
+hyper1.nu = param1.dim+1;
+hyper1.lambda = 1*eye(param1.dim);
 
-% choose noise distribution to be "normal" or "uniform"
-%noise_distribution="normal";
-noise_distribution="uniform";
+% choose noise distribution to be 'normal' or 'uniform'
+%noise_distribution='normal';
+noise_distribution='uniform';
 
 test_same_angle=false;
 same_angle=pi/3;
@@ -67,5 +68,3 @@ test_same_length=false;
 same_length=4;
 
 extremes_only=true;
-
-

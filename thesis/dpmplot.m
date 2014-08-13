@@ -16,19 +16,14 @@
 % Load configuration from file
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-fname='dpmline2';
+%fname='dpmline2';
+fname='dpmobject1';
 config_dir='config';
 
 data_dir='data';
-% Create data directory
-mkdir(data_dir);
-
-addpath('/home/anne/myworkspace/octave/thesis/config')
 
 input_file=[config_dir '/' fname '_config.m']
 data_file=[data_dir '/' fname '.pnts.data'];
-
-ifile=[fname '.config.m']
 
 % source(input_file);
 run(input_file)

@@ -30,7 +30,7 @@ hyper.lambda = 1*eye(dim);
 % the number of items is fixed, it is not possible to get another item in an incremental fashion using this generator
 n=200;
 
-% choose noise distribution to be "normal" or "uniform"
+% choose noise distribution to be 'normal' or 'uniform'
 noise_distribution='normal';
 
 test_same_angle=false;

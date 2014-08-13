@@ -16,16 +16,15 @@
 % Load configuration from file
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%fname='dpmline2';
 fname='dpmobject1';
 config_dir='config';
 
 data_dir='data';
 
-input_file=[config_dir '/' fname '_config.m']
+input_file=[config_dir '/' fname '_config.m'];
 data_file=[data_dir '/' fname '.pnts.data'];
 
-run(input_file)
+run(input_file);
 
 % Load data in P
 P=load(data_file)';
@@ -46,14 +45,12 @@ addpath('/home/anne/myworkspace/octave/nonparam_workshop/private')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % hyper and alpha come from config file
+hyper1
 alpha=0.1
 niter=100;
 doPlot=2;
 type_algo='collapsedCRP';
-[c_st, c_est, similarity] = gibbsDPM(P, hyper, alpha, niter, type_algo, doPlot);
-
-% This runs a collapsed CRP over points expecting them to be generated from Gaussians, not from lines... It does 
-% remarkably well though...
+[c_st, c_est, similarity] = gibbsDPM(P, hyper1, alpha, niter, type_algo, doPlot);
 
 [~, ind] = sort(c_est);
 figure
@@ -66,3 +63,4 @@ for j=1:length(ind2)
 	plot(P(:, c_est==ind2(j)), 'k')
 	ylim([-5, 5])
 end
+
