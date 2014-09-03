@@ -56,6 +56,23 @@ The graphics are different because matlab is used now instead of octave. The alg
 
 The inference procedure uses the same configuration file as the generation procedure for now. So, we do not search for the hyperparameter alpha for example. This would be normally part of the inference process. Note that a generation process with a high alpha will generate many short lines as well. Therefore, for the inference process to only capture the most "salient lines" it is wise to set alpha much lower than the "true" value. This is an interesting observation in my opinion. 
 
+The inference process for squares clarifies that the underlying generative model are Gaussians that are not translated.
+Consider squares generated in the following way:
+
+<p align="center">
+<img src="pictures/squares_rnd0.png?raw=true" alt="Generation of squares" height="500px"/>
+</p>
+
+This leads to the following inferred objects:
+
+<p align="center">
+<img src="pictures/squares_inf0A.png?raw=true" alt="Inference of squares" height="500px"/>
+</p>
+
+At the right top the squares are perfectly detected, however, this is done through a normal Gaussian. Also in the more
+cluttered part Gaussians are used. In this case, elongated Gaussians can be used to model lines. A few lines are 
+retrieved, but it is clear that knowledge about squares would make the inference process much easier.
+
 ## Copyrights
 
 * Author: Anne van Rossum
