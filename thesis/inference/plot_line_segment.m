@@ -1,5 +1,5 @@
 % plots a line a+b*x from x0 to x1
-function plot_line(x0, x1, a, b)
+function plot_line_segment(x0, x1, a, b)
 	% angle, reverse
 	theta = atan(b);
 	%v = abs(a/b);
