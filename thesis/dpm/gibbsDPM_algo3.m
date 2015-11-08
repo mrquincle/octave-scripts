@@ -4,7 +4,7 @@ function c_st = gibbsDPM_algo3(y, hyperG0, alpha, niter, doPlot)
 % The base distribution G0 is Normal inverse Wishart of parameters given by
 % hyperG0
 % Locations U are integrated out (conjugate case)
-% Reference: algorithm 3 of Neal
+% Reference: Algorithm 3 of Neal
 
 if doPlot
     figure('name','Gibbs sampling for DPM');
@@ -18,18 +18,16 @@ c_st = zeros(n, niter/2);
 % U_SS is a structure array where U_SS(k) contains the sufficient
 % statistics associated to cluster k
 if (hyperG0.prior == 'NIW')
-U_SS = struct('prior', 'NIW', 'mu', cell(n, 1), 'kappa', cell(n, 1), ...
-    'nu', cell(n, 1), 'lambda', cell(n, 1));
+    U_SS = struct('prior', 'NIW', 'mu', cell(n, 1), 'kappa', cell(n, 1), ...
+        'nu', cell(n, 1), 'lambda', cell(n, 1));
 else
-U_SS = struct('prior', 'NIG', 'mu', cell(n, 1), 'a', cell(n, 1), 'b', cell(n, 1), 'Lambda', cell(n, 1));
+    U_SS = struct('prior', 'NIG', 'mu', cell(n, 1), 'a', cell(n, 1), ...
+        'b', cell(n, 1), 'Lambda', cell(n, 1));
 end
-% how to adjust?
-% update_SS stays the same
-% pred can stay the same as well
-% adjusted downdate_SS to handle also NIG
 
 m = zeros(1,200);
 c = zeros(n, 1);
+
 % Initialisation
 for k=1:n
     c(k) = ceil(30*rand); % Sample new allocation uniform
@@ -43,6 +41,7 @@ end
 
 % Iterations
 for i=2:niter
+    % Update cluster assignments c
     for k=1:n
         % Remove data k from the partition
         m(c(k)) = m(c(k)) - 1;
@@ -57,14 +56,8 @@ for i=2:niter
             U_SS(c(k)) = update_SS(y(:,k), hyperG0);
         end
         if doPlot==1
-            some_plot(y, U_SS, m, c, k, i, cmap)
+            some_plot(y, hyperG0, U_SS, m, c, k, i, cmap)
         end
-    end
-
-    print_clusters=false;
-    if (print_clusters)
-        fprintf('Iteration %d/%d\n', i, niter)
-        fprintf('%d clusters\n\n', length(unique(c)))
     end
 
     if i>niter/2
@@ -72,7 +65,7 @@ for i=2:niter
     end
 
     if doPlot==2
-        some_plot(y, U_SS, m, c, k, i, cmap)
+        some_plot(y, hyperG0, U_SS, m, c, k, i, cmap)
     end
 
 end
@@ -89,21 +82,22 @@ function K = sample_c(m, alpha, z, hyperG0, U_SS)
     end
 
     n0 = pred(z, hyperG0);
-    const = sum(n)/(alpha+r) + alpha/(alpha+r)*n0;
+    alphar=alpha+r;
+    const = sum(n)/alphar + alpha/alphar*n0;
 
-    p0=alpha/(alpha+r)*n0/const; % probability of sampling a new item
+    p0=alpha/alphar*n0/const; % probability of sampling a new item
     u=rand(1);
     if u<p0 % New cluster
         K = find(m==0, 1);
     else
         u1 = (u-p0);
-        ind = find(u1<= cumsum(n/const/(alpha+r)), 1 );
+        ind = find(u1<= cumsum(n/const/alphar), 1 );
         K = c(ind);
     end
 end
 
-function some_plot(z, U_SS, m, c, k, i, cmap)
-    if strcmp(U_SS.prior, 'NIG')
+function some_plot(z, hyperG0, U_SS, m, c, k, i, cmap)
+    if strcmp(hyperG0.prior, 'NIG')
         z=z(2:end,:);
     end
 

@@ -24,7 +24,7 @@
 %
 % There are different MCMC algorithms implemented. These can be tested through
 % setting the variable type_algo. The options tested for all cases are
-% 'CRP' and 'collapsedCRP'.
+% 'BMQ' and 'CRP'. It seems 'collapsedCRP' is implemented incorrectly.
 %
 % To test the classification results, RandIndex and similar metrics are used.
 
@@ -41,9 +41,9 @@ addpath('../inference/likelihood/normal')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Set the prior to use
-% Options: ['NIW', 'NIG']
-
-type_prior='NIG';
+prior = {'NIQ'; 'NIG'};
+type_prior=prior{2}
+printf('Use prior ''%s''\n', type_prior);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load the dataset
@@ -83,14 +83,14 @@ alpha = 1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % The inference method
-% Options: ['BMQ', 'CRP', 'collapsedCRP', 'slicesampler']
-type_algo = 'CRP';
+algorithm = {'BMQ'; 'CRP'; 'collapsedCRP'; 'slicesampler'};
+type_algo = algorithm{2};
+printf('Use algorithm ''%s''\n', type_algo);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Persistent, so we can perform post-analysis on our inference
 save(output_inference_file, '-append', 'output_inference_file', 'niter',
 	'doPlot', 'type_prior', 'alpha', 'type_algo');
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % We perform inference over a list of datasets
@@ -145,7 +145,7 @@ for f = 1:length(fileList)
 		hyperG0.nu = 4;
 		hyperG0.lambda = eye(2);
 	otherwise
-		error('Unknown algorithm ''%s''', type_prior);
+		error('Unknown prior ''%s''', type_prior);
 	end
 
 	%%
