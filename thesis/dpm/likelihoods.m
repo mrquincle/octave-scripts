@@ -1,7 +1,8 @@
 function n = likelihoods(S, data, mu, Sigma)
-	if (S.prior == 'NIW')
+	switch(S.prior)
+	case 'NIW'
 		n = exp(loggausspdf(data, mu, Sigma));
-	elseif (S.prior == 'NIG')
+	case 'NIG'
 	%	data
 		y=data(end,:)';
 		X=data(1:end-1,:);
@@ -11,7 +12,7 @@ function n = likelihoods(S, data, mu, Sigma)
 	%	size(mu)
 		mu2=sum(X.*mu',1)';
 		n = exp(loggausspdf(y, mu2, Sigma));
-	else
+	otherwise
 		error("Unknown type of prior");
 	end
 end

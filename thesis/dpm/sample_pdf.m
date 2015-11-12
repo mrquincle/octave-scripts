@@ -1,10 +1,11 @@
 function R = sample_pdf(S)
 
-	if (S.prior == 'NIW')
+	switch(S.prior)
+	case 'NIW'
 		[R.mu, R.Sigma] = normalinvwishrnd(S);
-	elseif (S.prior == 'NIG')
+	case 'NIG'
 		[R.mu, R.Sigma] = nigrnd(S);
-	else
+	otherwise
 		error("Unknown type of prior");
 	end
 end

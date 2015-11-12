@@ -1,12 +1,21 @@
+% Update sufficient statistics S with new data z
+%
+% -- Function: R = update_SS(z, S)
+%     The data can be just observations itself or in the case of a regression
+%     problem z=(X,y) with X the independent variables (can be a vector) and y
+%     the dependent variable.
+%     Currently supported S.prior:
+%      * 'NIW', a Normal inverse Wishart distribution
+%      * 'NIG', a Normal inverse Gamma distribution
+%     Returns R, the updated sufficient statistics.
+%
 function R = update_SS(z, S)
-	% Update sufficient statistics with new data z
-	% The data can be just observations itself or in the case of a regression problem it can be pairs of (X,y) with X the independent variables (can be a vector) and y the dependent variable
-
-	if (S.prior == 'NIW')
+	switch(S.prior)
+	case 'NIW'
 		R = niwupdate(z, S);
-	elseif (S.prior == 'NIG')
+	case 'NIG'
 		R = nigupdate(z, S);
-	else
+	otherwise
 		error("Unknown type of prior");
 	end
 

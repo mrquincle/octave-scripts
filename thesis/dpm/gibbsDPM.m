@@ -14,7 +14,7 @@ function [partition_samples, partition_estimate, similarity] = gibbsDPM(y, hyper
 %   - niter:    Number of MCMC iterations. The sampler performs niter/2
 %               burn-in iterations and then stores nsamples=niter/2 samples
 %   - type_algo: String of characters. Type of Gibbs samplers used.
-%               Possible values: 
+%               Possible values:
 %                   - 'BMQ': Sampler based on the Blackwell-MacQueen urn
 %                   - 'CRP': Sampler based on the Chinese Restaurant Process
 %                   - 'collapsedCRP': Collapsed Gibbs sampler based on the Chinese Restaurant Process
@@ -26,7 +26,7 @@ function [partition_samples, partition_estimate, similarity] = gibbsDPM(y, hyper
 %   - partition_samples: Matrix of size n*n_samples partition_samples(k,i)
 %               gives the cluster assignment of data k for sample i
 %   - partition_estimate: Vector of length n giving a Bayesian point estimate of
-%               the partition 
+%               the partition
 %   - similarity: Matrix of size n*n. similarity(i,j) provides
 %               the number of MCMC samples where i and j are in the same cluster
 %--------------------------------------------------------------------------
@@ -60,6 +60,8 @@ switch(type_algo)
         partition_samples = gibbsDPM_algo3(y, hyperG0, alpha, niter, doPlot);
     case 'slicesampler' % Using slice sampling
         partition_samples = gibbsDPM_algo4(y, hyperG0, alpha, niter, doPlot);
+    case 'auxiliaryvars' % Auxiliary variables
+        partition_samples = gibbsDPM_algo8(y, hyperG0, alpha, niter, doPlot);
     otherwise
         error('Unknown algorithm ''%s''', type_algo);
 end

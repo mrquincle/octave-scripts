@@ -1,9 +1,10 @@
 function R = downdate_SS(z, S)
-
-	if (S.prior == 'NIW')
+	switch (S.prior)
+	case 'NIW'
 		R = niwdowndate(z, S);
-	elseif (S.prior == 'NIG')
+	case 'NIG'
 		R = nigdowndate(z, S);
-	else
+	otherwise
 		error("Unknown type of prior");
 	end
+end

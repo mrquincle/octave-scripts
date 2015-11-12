@@ -1,74 +1,74 @@
-function c_st = gibbsDPM_algo3(y, hyperG0, alpha, niter, doPlot)
-
 % Gibbs sampler for Dirichlet Process Mixtures of Gaussians
 % The base distribution G0 is Normal inverse Wishart of parameters given by
 % hyperG0
 % Locations U are integrated out (conjugate case)
 % Reference: Algorithm 3 of Neal
 
-if doPlot
-    figure('name','Gibbs sampling for DPM');
-    colormap('default')
-    cmap = colormap;
-end
+function c_st = gibbsDPM_algo3(y, hyperG0, alpha, niter, doPlot)
 
-n = size(y,2);
-c_st = zeros(n, niter/2);
-
-% U_SS is a structure array where U_SS(k) contains the sufficient
-% statistics associated to cluster k
-if (hyperG0.prior == 'NIW')
-    U_SS = struct('prior', 'NIW', 'mu', cell(n, 1), 'kappa', cell(n, 1), ...
-        'nu', cell(n, 1), 'lambda', cell(n, 1));
-else
-    U_SS = struct('prior', 'NIG', 'mu', cell(n, 1), 'a', cell(n, 1), ...
-        'b', cell(n, 1), 'Lambda', cell(n, 1));
-end
-
-m = zeros(1,200);
-c = zeros(n, 1);
-
-% Initialisation
-for k=1:n
-    c(k) = ceil(30*rand); % Sample new allocation uniform
-    m(c(k)) = m(c(k)) + 1;
-    if m(c(k))>1
-        U_SS(c(k)) = update_SS(y(:,k), U_SS(c(k)));
-    else
-        U_SS(c(k)) = update_SS(y(:,k), hyperG0);
+    if doPlot
+        figure('name','Gibbs sampling for DPM');
+        colormap('default')
+        cmap = colormap;
     end
-end
 
-% Iterations
-for i=2:niter
-    % Update cluster assignments c
+    n = size(y,2);
+    c_st = zeros(n, niter/2);
+
+    % U_SS is a structure array where U_SS(k) contains the sufficient
+    % statistics associated to cluster k
+    if (hyperG0.prior == 'NIW')
+        U_SS = struct('prior', 'NIW', 'mu', cell(n, 1), 'kappa', cell(n, 1), ...
+            'nu', cell(n, 1), 'lambda', cell(n, 1));
+    else
+        U_SS = struct('prior', 'NIG', 'mu', cell(n, 1), 'a', cell(n, 1), ...
+            'b', cell(n, 1), 'Lambda', cell(n, 1));
+    end
+
+    m = zeros(1,200);
+    c = zeros(n, 1);
+
+    % Initialisation
     for k=1:n
-        % Remove data k from the partition
-        m(c(k)) = m(c(k)) - 1;
-        U_SS(c(k)) = downdate_SS(y(:,k),U_SS(c(k)));
-
-        % Sample allocation of data k
-        c(k) = sample_c(m, alpha, y(:,k), hyperG0, U_SS);
+        c(k) = ceil(30*rand); % Sample new allocation uniform
         m(c(k)) = m(c(k)) + 1;
         if m(c(k))>1
             U_SS(c(k)) = update_SS(y(:,k), U_SS(c(k)));
         else
             U_SS(c(k)) = update_SS(y(:,k), hyperG0);
         end
-        if doPlot==1
+    end
+
+    % Iterations
+    for i=2:niter
+        % Update cluster assignments c
+        for k=1:n
+            % Remove data k from the partition
+            m(c(k)) = m(c(k)) - 1;
+            U_SS(c(k)) = downdate_SS(y(:,k),U_SS(c(k)));
+
+            % Sample allocation of data k
+            c(k) = sample_c(m, alpha, y(:,k), hyperG0, U_SS);
+            m(c(k)) = m(c(k)) + 1;
+            if m(c(k))>1
+                U_SS(c(k)) = update_SS(y(:,k), U_SS(c(k)));
+            else
+                U_SS(c(k)) = update_SS(y(:,k), hyperG0);
+            end
+            if doPlot==1
+                some_plot(y, hyperG0, U_SS, m, c, k, i, cmap)
+            end
+        end
+
+        if i>niter/2
+            c_st(:, i-niter/2) = c;
+        end
+
+        if doPlot==2
             some_plot(y, hyperG0, U_SS, m, c, k, i, cmap)
         end
-    end
 
-    if i>niter/2
-        c_st(:, i-niter/2) = c;
     end
-
-    if doPlot==2
-        some_plot(y, hyperG0, U_SS, m, c, k, i, cmap)
-    end
-
-end
 end
 
 % Subfunctions

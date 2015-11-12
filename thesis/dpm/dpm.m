@@ -41,7 +41,7 @@ addpath('../inference/likelihood/normal')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Set the prior to use
-prior = {'NIQ'; 'NIG'};
+prior = {'NIQ'; 'NIG';'DPM_Seg'};
 type_prior=prior{2}
 printf('Use prior ''%s''\n', type_prior);
 
@@ -71,7 +71,7 @@ fileList = glob(data_glob);
 niter = 100;
 
 % Type of plots (plot at every Gibbs step, or only after each point is updated)
-doPlot = 2;
+doPlot = 0;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Dirichlet Process Mixture parameters
@@ -83,8 +83,8 @@ alpha = 1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % The inference method
-algorithm = {'BMQ'; 'CRP'; 'collapsedCRP'; 'slicesampler'};
-type_algo = algorithm{2};
+algorithm = {'BMQ'; 'CRP'; 'collapsedCRP'; 'slicesampler'; 'auxiliaryvars'};
+type_algo = algorithm{5};
 printf('Use algorithm ''%s''\n', type_algo);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -148,12 +148,10 @@ for f = 1:length(fileList)
 		error('Unknown prior ''%s''', type_prior);
 	end
 
-	%%
-	% # Look at the Matlab function gibbsDPM_algo1.
-	% # Run the Gibbs sampler for 20 iterations, with graphical output.
+	% Actual Gibbs sampling
 	[c_st, c_est, similarity] = gibbsDPM(P, hyperG0, alpha, niter, type_algo, doPlot);
 
-	% Plot posterior similarity matrix (data ordered with respect to point estimate)
+	% Plots posterior similarity matrix (data ordered with respect to point estimate)
 	if (doPlot)
 		[~, ind] = sort(c_est);
 		figure

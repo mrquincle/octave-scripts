@@ -1,82 +1,81 @@
-function c_st = gibbsDPM_algo1(P, hyperG0, alpha, niter, doPlot)
-
 % Gibbs sampler for Dirichlet Process Mixtures of Gaussians
 % The base distribution G0 is Normal inverse Wishart of parameters given by
 % hyperG0
 % Reference: Algorithm 1 of Neal
 
-if doPlot
-    figure('name','Gibbs sampling for DPM');
-    colormap('default')
-    cmap = colormap;
-end
+function c_st = gibbsDPM_algo1(P, hyperG0, alpha, niter, doPlot)
 
-[p, n] = size(P);
-c_st = zeros(n, niter/2);
+    if doPlot
+        figure('name','Gibbs sampling for DPM');
+        colormap('default');
+        cmap = colormap;
+    end
 
-if (hyperG0.prior == 'NIW')
-    theta_Sigma = zeros(p, p, n);
-elseif (hyperG0.prior == 'NIG')
-    p=p-1; % the y-coordinate doesn't count as dimension
-    theta_Sigma = zeros(n);
-end
-theta_mu = zeros(p, n);
+    [p, n] = size(P);
+    c_st = zeros(n, niter/2);
 
-% Initialisation
-hyper = update_SS(P(:, 1), hyperG0);
-%[theta_mu(:, 1), theta_Sigma(:,:, 1)] = normalinvwishrnd(hyper);
-R = sample_pdf(hyper);
-theta_mu(:, 1) = R.mu;
-if (hyperG0.prior == 'NIW')
-    theta_Sigma(:, :, 1) = R.Sigma;
-else
-    theta_Sigma(1) = R.Sigma;
-end
-
-for k=2:n
     if (hyperG0.prior == 'NIW')
-	[theta_mu(:, k), theta_Sigma(:, :, k)] = sample_theta(alpha,...
-	    P(:,k), hyperG0, theta_mu(:, 1:k-1), theta_Sigma(:, :, 1:k-1));
+        theta_Sigma = zeros(p, p, n);
+    elseif (hyperG0.prior == 'NIG')
+        p=p-1; % the y-coordinate doesn't count as dimension
+        theta_Sigma = zeros(n);
+    end
+    theta_mu = zeros(p, n);
+
+    % Initialisation
+    hyper = update_SS(P(:, 1), hyperG0);
+    %[theta_mu(:, 1), theta_Sigma(:,:, 1)] = normalinvwishrnd(hyper);
+    R = sample_pdf(hyper);
+    theta_mu(:, 1) = R.mu;
+    if (hyperG0.prior == 'NIW')
+        theta_Sigma(:, :, 1) = R.Sigma;
     else
-	[theta_mu(:, k), theta_Sigma(k)] = sample_theta(alpha,...
-	    P(:,k), hyperG0, theta_mu(:, 1:k-1), theta_Sigma(1:k-1));
-    end
-end
-
-% Iterations
-for i=2:niter
-    for k=1:n
-	% Sample theta_k | theta_{-k}, y_k
-	ind_notk = (1:n)~=k;
-	if (hyperG0.prior == 'NIW')
-	    [theta_mu(:, k), theta_Sigma(:, :, k)] = sample_theta(alpha,...
-	       P(:,k), hyperG0, theta_mu(:, ind_notk), theta_Sigma(:, :, ind_notk));
-	else
-	    [theta_mu(:, k), theta_Sigma(k)] = sample_theta(alpha,...
-	       P(:,k), hyperG0, theta_mu(:, ind_notk), theta_Sigma(ind_notk));
-	end
-	if doPlot==1
-	    some_plot(y, theta_mu, theta_Sigma, k, i, n, cmap);
-	end
-    end
-    % get the partition
-    [~, ~, c] = unique(theta_mu(1, :));
-
-    print_clusters=true;
-    if (print_clusters)
-       fprintf('Iteration %d/%d\n', i, niter);
-       fprintf('%d clusters\n\n', length(unique(c)));
+        theta_Sigma(1) = R.Sigma;
     end
 
-    if doPlot==2
-	    some_plot(P(:,:), theta_mu, theta_Sigma, k, i, n, cmap);
+    for k=2:n
+        if (hyperG0.prior == 'NIW')
+            [theta_mu(:, k), theta_Sigma(:, :, k)] = sample_theta(alpha,...
+                P(:,k), hyperG0, theta_mu(:, 1:k-1), theta_Sigma(:, :, 1:k-1));
+        else
+            [theta_mu(:, k), theta_Sigma(k)] = sample_theta(alpha,...
+                P(:,k), hyperG0, theta_mu(:, 1:k-1), theta_Sigma(1:k-1));
+        end
     end
 
-    if i>niter/2
-	c_st(:, i-niter/2) = c;
-    end
-end
+    % Iterations
+    for i=2:niter
+        for k=1:n
+            % Sample theta_k | theta_{-k}, y_k
+            ind_notk = (1:n)~=k;
+            if (hyperG0.prior == 'NIW')
+                [theta_mu(:, k), theta_Sigma(:, :, k)] = sample_theta(alpha,...
+                    P(:,k), hyperG0, theta_mu(:, ind_notk), theta_Sigma(:, :, ind_notk));
+            else
+                [theta_mu(:, k), theta_Sigma(k)] = sample_theta(alpha,...
+                    P(:,k), hyperG0, theta_mu(:, ind_notk), theta_Sigma(ind_notk));
+            end
+            if doPlot==1
+                some_plot(y, theta_mu, theta_Sigma, k, i, n, cmap);
+            end
+        end
+        % get the partition
+        [~, ~, c] = unique(theta_mu(1, :));
 
+        print_clusters=true;
+        if (print_clusters)
+            fprintf('Iteration %d/%d\n', i, niter);
+            fprintf('%d clusters\n\n', length(unique(c)));
+        end
+
+        if doPlot==2
+            some_plot(P(:,:), theta_mu, theta_Sigma, k, i, n, cmap);
+        end
+
+        if i>niter/2
+           c_st(:, i-niter/2) = c;
+        end
+    end
 end
 
 %%%% Subfunctions
@@ -175,13 +174,13 @@ function some_plot(zt, theta_mu, theta_Sigma, k, i, n, cmap)
     maxN=si(1:min(N,length(si))); % print N largest
 
     if (print_clusters)
-       for j=maxN
-	   cluster=j
-	   ind2 = find(theta_mu(1, :)==ind(j));
-	   cluster_line_coefficients=theta_mu(:,ind2(1))
-	   sigma=theta_Sigma(ind2(1))
-	   nmbr=cnt(j)
-      end
+        for j=maxN
+            cluster=j
+            ind2 = find(theta_mu(1, :)==ind(j));
+            cluster_line_coefficients=theta_mu(:,ind2(1))
+            sigma=theta_Sigma(ind2(1))
+            nmbr=cnt(j)
+       end
    end
     % print also one when tere is a single cluster
 %    if (length(ind) == 1)
