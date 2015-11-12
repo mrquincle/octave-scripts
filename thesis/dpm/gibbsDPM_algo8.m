@@ -102,12 +102,13 @@ function c_st = gibbsDPM_algo8(y, hyperG0, alpha, niter, doPlot)
     end
 end
 
-% Different from the conjugate case, we could first establish the probability
-% of sampling a new or existing clusters, only only after this decide to sample
-% from a new distribution. In the nonconjugate case we have no closed-form
-% description of the posterior probability, hence we actually have to sample
-% from our prior and only establish then the likelihood that our observation
-% originated from an existing or this new cluster.
+% Different from the conjugate case! In the conjugate case we could first
+% establish the probability of sampling a new or existing cluster. Only after
+% that we decided to sample from the new distribution.
+% Now, in the nonconjugate case we have no closed-form description of the
+% posterior probability, hence we actually have to sample from our prior.
+% Then we treat the proposed cluster just as an existing one and calculate the
+% likelihood in one sweep.
 function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_mu, U_Sigma)
 
     % Neal's m, the number of auxiliary variables
@@ -117,7 +118,6 @@ function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_mu, U_Sigma)
     emptyT = find(m==0, n_m);
     % This cluster does have not a number of customers, but alpha/m as weight
     m(emptyT) = alpha/n_m;
- %   emptyT
     % Get values from prior, to be used in likelihood calculation
     for i=1:length(emptyT)
         % Sample for this empty table
@@ -140,7 +140,6 @@ function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_mu, U_Sigma)
             otherwise
         end
     end
-%    m
 
     % Indices of all clusters, both existing and proposed
     c = find(m~=0);
@@ -160,11 +159,12 @@ function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_mu, U_Sigma)
     setzero=setdiff(emptyT,K);
     m(setzero)=0;
 
+    % The update flag is used to set U_mu/U_Sigma outside this function,
+    % because octave/matlab doesn't support pass-by-reference
     update=true;
     if (length(setzero) == length(emptyT))
         update=false;
     end
-%    K
 end
 
 % Plot mean values
