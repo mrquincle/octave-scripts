@@ -1,5 +1,21 @@
 % A Gibbs sampling algorithm that uses auxiliary variables
-
+%
+% -- Function: c_st = gibbsDPM_algo8(y, hyperG0, alpha, niter, doPlot)
+%     Apply Gibbs sampling with m auxiliary variables.
+%
+%     The data is provided in y. In case of dependent plus independent
+%     variables as in a regression problem, y contains both.
+%
+%     The hyperparameters are provided in hyperG0.
+%
+%     The Dirichlet Process Mixture parameter is given through alpha.
+%
+%     The number of iterations is defined in niter.
+%
+%     There are three plotting options though doPlot. If it is 0 nothing will
+%     be plotted, if it is 1 every step will be plotted, if it is 2 the plot
+%     will be updated every iteration for all data points at once.
+%
 function c_st = gibbsDPM_algo8(y, hyperG0, alpha, niter, doPlot)
 
     if doPlot
@@ -26,6 +42,7 @@ function c_st = gibbsDPM_algo8(y, hyperG0, alpha, niter, doPlot)
         c(k) = ceil(30*rand);
         % Add to the table counter
         m(c(k)) = m(c(k)) + 1;
+
         switch (hyperG0.prior)
         case { 'NIW', 'NIG' }
             if m(c(k))>1
@@ -60,8 +77,8 @@ function c_st = gibbsDPM_algo8(y, hyperG0, alpha, niter, doPlot)
             R = sample_pdf(hyperG0);
             U_R.mu(:, ind(j)) = R.mu;
             U_R.Sigma(ind(j)) = R.Sigma;
-            % U_R.a(emptyT(i)) = R.a; % endpoint
-            % U_R.b(emptyT(i)) = R.b; % endpoint
+            U_R.a(emptyT(i)) = R.a;
+            U_R.b(emptyT(i)) = R.b;
         end
     end
 
@@ -73,10 +90,15 @@ function c_st = gibbsDPM_algo8(y, hyperG0, alpha, niter, doPlot)
             m(c(k)) = m(c(k)) - 1;
 
             % Assign new table index
-            [c(k) update, R] = sample_c(m, alpha, y(:,k), hyperG0, U_R.mu, U_R.Sigma);
+            [c(k) update, R] = sample_c(m, alpha, y(:,k), hyperG0, U_R);
             if (update)
                 U_R.mu(:, c(k)) = R.mu;
                 U_R.Sigma(c(k)) = R.Sigma;
+                switch (hyperG0.prior)
+                case 'DPM_Seg'
+                    U_R.a(c(k)) = R.a;
+                    U_R.b(c(k)) = R.b;
+                end
             end
 
             % Add data item k to table indicated by index c
@@ -109,7 +131,7 @@ end
 % posterior probability, hence we actually have to sample from our prior.
 % Then we treat the proposed cluster just as an existing one and calculate the
 % likelihood in one sweep.
-function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_mu, U_Sigma)
+function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_R)
 
     % Neal's m, the number of auxiliary variables
     n_m=3;
@@ -123,20 +145,20 @@ function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_mu, U_Sigma)
         % Sample for this empty table
         switch(hyperG0.prior)
             case 'NIW'
+                % Sample from the prior, not taken into account data items
                 R = sample_pdf(hyperG0);
-                %R = sample_pdf(U_SS(emptyT(i)));
-                U_mu(:, emptyT(i)) = R.mu;
-                U_Sigma(:, :, emptyT(i)) = R.Sigma;
+                U_R.mu(:, emptyT(i)) = R.mu;
+                U_R.Sigma(:, :, emptyT(i)) = R.Sigma;
             case 'NIG'
                 R = sample_pdf(hyperG0);
-                U_mu(:, emptyT(i)) = R.mu;
-                U_Sigma(emptyT(i)) = R.Sigma;
+                U_R.mu(:, emptyT(i)) = R.mu;
+                U_R.Sigma(emptyT(i)) = R.Sigma;
             case 'DPM_Seg' % Dirichlet Process Mixture of Segments
                 R = sample_pdf(hyperG0);
-                U_mu(:, emptyT(i)) = R.mu;
-                U_Sigma(emptyT(i)) = R.Sigma;
-                % U_R.a(emptyT(i)) = R.a; % endpoint
-                % U_R.b(emptyT(i)) = R.b; % endpoint
+                U_R.mu(:, emptyT(i)) = R.mu;
+                U_R.Sigma(emptyT(i)) = R.Sigma;
+                U_R.a(emptyT(i)) = R.a; % endpoint
+                U_R.b(emptyT(i)) = R.b; % endpoint
             otherwise
         end
     end
@@ -145,9 +167,10 @@ function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_mu, U_Sigma)
     c = find(m~=0);
 
     % Calculate likelihood for every cluster
-    n = m(c).*likelihoods(hyperG0, repmat(z, 1, length(c)), U_mu(:, c)', U_Sigma(c)' )';
+    n = m(c).*likelihoods(hyperG0, repmat(z, 1, length(c)), U_R.mu(:, c)', U_R.Sigma(c)' )';
 
-    % Calculate b, as b=(n-1+alpha)/sum(n), of which we can forget the nominator
+    % Calculate b, as b=(N-1+alpha)/sum(n), of which the nominator (N-1+alpha)
+    % gets cancelled out again, so we only require 1/const = 1/sum(n)
     const = sum(n);
 
     % Sample cluster in n according to their weight n(c)
