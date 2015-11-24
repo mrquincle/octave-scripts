@@ -14,7 +14,12 @@
 
 plot_avg_cov = false;
 
-dim=3;
+% A 2D world
+dim=2;
+% A line is a 2D object, set to 2 in that case!
+object_dim=2;
+% the number of items is fixed, it is not possible to get another item in an incremental fashion using this generator
+n=200;
 % With a higher alpha there will be more lines formed, the chance to form a new cluster will increase
 alpha=2;
 
@@ -28,9 +33,6 @@ hyper.nu = dim+2;
 % the spread of the objects over the entire space
 hyper.lambda = 8*eye(dim);
 
-% the number of items is fixed, it is not possible to get another item in an incremental fashion using this generator
-n=2000;
-
 % A larger value for param1.alpha means more different types of lines
 % The dimension is now (param1.alpha, length1, length2) for 2D, and (param1.alpha, alpha2, length1, length2) for 3D
 switch (dim)
@@ -40,8 +42,6 @@ case 3
 	param1.dim=dim+2;
 end
 
-% A line is a 2D object, set to 2 in that case!
-object_dim=3;
 switch (object_dim)
 case 3
 	if (dim == 2) 

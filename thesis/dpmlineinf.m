@@ -28,7 +28,8 @@ data_file=[data_dir '/' fname '.pnts.data'];
 run(input_file)
 
 % Load data in P
-P=load(data_file)';
+F=load(data_file);
+P=[ F(:,1) F(:,2)]';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Default configuration options
@@ -62,7 +63,7 @@ imagesc(double(similarity(ind, ind)));
 figure
 ind2 = unique(c_est);
 for j=1:length(ind2)
-	subplot(5,5,j)
-	plot(P(:, c_est==ind2(j)), 'k')
-	ylim([-5, 5])
+	subplot(5,5,j);
+	plot(P(:, c_est==ind2(j)), 'k');
+	ylim([-5, 5]);
 end

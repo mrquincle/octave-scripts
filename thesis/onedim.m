@@ -82,7 +82,7 @@ for i=1:n
                 % points on line segment are generated uniformly
                 sn=2*rand(1)-1;
         end
-	sn=sn*sn_scale;
+		  sn=sn*sn_scale;
 
         % We use a multiplicative structure to pick a point on the line segment
         % The end of the line (lp) compared to the mean is taken negative as well as positive to form a line segment

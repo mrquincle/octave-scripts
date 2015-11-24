@@ -21,7 +21,10 @@
 %  * Sample \sigma^2 from an inverse gamma distribution with parameters a and b
 %  * Sample x from a normal distribution with mean \mu and variance \sigma^2/\lambda
 
-function [mu, sigma] = nigrnd(S, N=1)
+function [mu, sigma] = nigrnd(S, N)
+	if ~exist('N','var')
+		N=1;
+	end
 	% sigma^2 \sim InverseGamma(a,b)
 	sigma2=1./gamrnd(S.a, S.b, N, 1);
 	% p(beta, sigma^2) \sim N(mu, sigma^2*inv(Lambda))

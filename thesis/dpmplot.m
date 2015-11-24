@@ -16,14 +16,16 @@
 % Load configuration from file
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%fname='dpmline2';
-fname='dpmobject1';
+fname='dpmline3';
+%fname='dpmobject1';
 config_dir='config';
 
 data_dir='data';
 
+version='1';
+
 input_file=[config_dir '/' fname '_config.m']
-data_file=[data_dir '/' fname '.pnts.data'];
+data_file=[data_dir '/' fname '.' version '.pnts.data'];
 
 % source(input_file);
 run(input_file)

@@ -23,9 +23,12 @@ m = zeros(K, 1);
 for j=1:length(ind)
     ind_j = find(partition==ind(j));
     m(j) = length(ind_j);
-    hyper(j) = hyperG0;
-    for k=1:length(ind_j)
-        hyper(j) = update_SS(y(:,ind_j(k)), hyper(j));
+    switch(hyperG0.prior)
+    case { 'NIW', 'NIG' }
+        hyper(j) = hyperG0;
+        for k=1:length(ind_j)
+            hyper(j) = update_SS(y(:,ind_j(k)), hyper(j));
+        end
     end
 end
 
@@ -34,7 +37,16 @@ logprior = K*log(alpha) + sum(gammaln(m)) + gammaln(alpha) - gammaln(alpha + n);
 
 % Compute log(p(y|partition))
 logmarglik = 0;
-for i=1:n
-    logmarglik = logmarglik + pred(y(:,i), hyper(partition2(i)));
+switch(hyperG0.prior)
+case { 'NIW', 'NIG' }
+    for i=1:n
+        logmarglik = logmarglik + pred(y(:,i), hyper(partition2(i)));
+    end
+case 'DPM_Seg'
+    for i=1:n
+        % TODO, we cannot just use hyperG0 here with the data
+        logmarglik = logmarklik + pred(y(:,i), param(partition2(i)));
+    end
 end
+
 logjoint = logprior + logmarglik;

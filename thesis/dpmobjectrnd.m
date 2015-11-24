@@ -92,6 +92,7 @@ lp2=zeros(dim,S);
 lp2_covar=zeros(dim,dim,S);
 lp3=zeros(dim,S);
 P=zeros(n,dim);
+Y=zeros(n,dim);
 
 % We add an additional CRP to get the same angle for line segments with a probability larger than 0, indicating 
 % correlations coming from higher-level objects, such as squares and alike.
@@ -210,40 +211,32 @@ for i=1:n
 	case 3
 		P(i,:)=mu(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + lp3(:,c)*sn(3) + chol(covar(:,:,c))' * randn(dim,1);
 	end
+	Y(i,:)=c;
 end
 
 % Invert matrix for easy plotting
 P=P';
+Y=Y';
+
+% Scale points
+scale=100
+P=P./scale;
+mu=mu./scale;
 
 switch (dim)
 case 2
 	% In the 2D case we plot a bit more, e.g. the 'true' lines that generate the points as well as the mean values.
 	plot(P(1,:),P(2,:),'.')
-	return;
+	dlmwrite(output_file, [P(1,:)' P(2,:)', Y(1,:)'], 'delimiter', '\t', 'precision', 10);
 	hold on
 	% Print mean values as a red circle
 	plot(mu(1,:),mu(2,:),'or');
-	% The factor 'f' indicates where exactly the endpoint ends (think of the normal distribution)
-	% The factor 'e' indicates where a triangle symbol will be placed. 
-	switch (noise_distribution)
-	case 'normal'
-		f=1.3;
-		g=1;
-	case 'uniform'
-		f=1; g=1;
-	end
-	plot(mu(1,:)-g*lp(1,:),mu(2,:)-g*lp(2,:),'^r');
-	plot(mu(1,:)+g*lp(1,:),mu(2,:)+g*lp(2,:),'vr');
-	for i=1:S
-		plot([mu(1,i)-f*lp(1,i); mu(1,i)+f*lp(1,i)],[mu(2,i)-f*lp(2,i), mu(2,i)+f*lp(2,i) ],'-');
-	end
-	dlmwrite(output_file, [P(1,:)' P(2,:)'], 'delimiter', '\t', 'precision', 10);
 case 3
 	plot3(P(1,:),P(2,:),P(3,:),'.')
 	hold on
 	% Print mean values as a red circle
 	plot3(mu(1,:),mu(2,:),mu(3,:),'or');
-	dlmwrite(output_file, [P(1,:)' P(2,:)' P(3,:)'], 'delimiter', '\t', 'precision', 10);
+	dlmwrite(output_file, [P(1,:)' P(2,:)' P(3,:)', Y(1,:)'], 'delimiter', '\t', 'precision', 10);
 end
 
 

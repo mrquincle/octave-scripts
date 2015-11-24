@@ -22,7 +22,13 @@
 %     have N, the number of samples, and x_m should not just be the extreme,
 %     but max(x_m, prior).
 
-function S = rnd_pareto(x_m, alpha, R=1, C=1)
+function S = rnd_pareto(x_m, alpha, R, C)
+	if ~exist('R','var')
+		R=1;
+	end
+	if ~exist('C','var')
+		C=1;
+	end
 	u = unifrnd(0, 1, R, C);
 	S = u.^(-1/(alpha)) .* x_m;
 end

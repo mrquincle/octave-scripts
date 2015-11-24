@@ -37,13 +37,22 @@ addpath('../performance')
 addpath('../inference')
 addpath('../inference/prior/nig')
 addpath('../inference/prior/niw')
+addpath('../inference/prior/pareto')
 addpath('../inference/likelihood/normal')
+
+addpath('../pareto')
+
+isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
+
+if ~isOctave
+	addpath('../octave-matlab')
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Set the prior to use
-prior = {'NIQ'; 'NIG';'DPM_Seg'};
-type_prior=prior{2}
-printf('Use prior ''%s''\n', type_prior);
+prior = {'NIQ'; 'NIG'; 'DPM_Seg'};
+type_prior=prior{3};
+fprintf('Use prior ''%s''\n', type_prior);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load the dataset
@@ -54,13 +63,16 @@ data_dir='../data/lines';
 data_glob=[data_dir '/*.data.txt'];
 
 output_dir='../output';
-mkdir(output_dir);
+if ~exist(output_dir, 'dir')
+	mkdir(output_dir);
+end
 
-timestamp=strtrim(ctime(time()));
-usec=num2str(gmtime(now()).usec)
-timestamp( timestamp == " " ) = "_";
+timestamp=datestr(now,'yyyy mmm dd HH:MM:SS.FFF');
+%timestamp=strtrim(ctime(time()));
+%usec=num2str(gmtime(now()).usec)
+timestamp( timestamp == ' ' ) = '_';
 
-output_inference_file=[output_dir '/' outfname '.pnts.' timestamp '.' usec '.data.txt'];
+output_inference_file=[output_dir '/' outfname '.pnts.' timestamp '.data.txt'];
 
 fileList = glob(data_glob);
 
@@ -72,6 +84,9 @@ niter = 100;
 
 % Type of plots (plot at every Gibbs step, or only after each point is updated)
 doPlot = 0;
+
+% Get MAP estimate
+findMAP = 0;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Dirichlet Process Mixture parameters
@@ -85,12 +100,20 @@ alpha = 1;
 % The inference method
 algorithm = {'BMQ'; 'CRP'; 'collapsedCRP'; 'slicesampler'; 'auxiliaryvars'};
 type_algo = algorithm{5};
-printf('Use algorithm ''%s''\n', type_algo);
+fprintf('Use algorithm ''%s''\n', type_algo);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Persistent, so we can perform post-analysis on our inference
-save(output_inference_file, '-append', 'output_inference_file', 'niter',
-	'doPlot', 'type_prior', 'alpha', 'type_algo');
+% The save command is different between matlab/octave, so replace by fprintf
+% save(output_inference_file, 'output_inference_file', 'niter', 'doPlot', 'type_prior', 'alpha', 'type_algo');
+%
+fid=fopen(output_inference_file, 'w');
+fprintf(fid, 'output_inference_file:\n%s\n', output_inference_file);
+fprintf(fid, 'niter:\n%i\n', niter);
+fprintf(fid, 'doPlot:\n%i\n', doPlot);
+fprintf(fid, 'type_prior:\n%s\n', type_prior);
+fprintf(fid, 'alpha:\n%d\n', alpha);
+fprintf(fid, 'type_algo:\n%s\n', type_algo);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % We perform inference over a list of datasets
@@ -100,7 +123,7 @@ for f = 1:length(fileList)
 	% Clear all variables when we get a new dataset, except for the ones we
 	% define here: the output file name, prior type, number of iterations,
 	% plotting variable, alpha, and the algorithm type
-	clear -x fileList output_inference_file type_prior f niter doPlot alpha type_algo
+	clearvars -except fileList output_inference_file fid type_prior f niter doPlot alpha type_algo findMAP
 
 	% Load the data from the dataset
 	data_file=fileList{f,1}
@@ -115,7 +138,7 @@ for f = 1:length(fileList)
 	P=[X0; P];
 
 	% Plot the raw dataset, the input for the algorithm
-	if (doPlot != 0)
+	if (doPlot ~= 0)
 		y=P(end,:);
 		X=P(2:end-1,:);
 
@@ -129,21 +152,31 @@ for f = 1:length(fileList)
 
 	% Set the parameters of the base distribution G0
 	switch(type_prior)
+	case 'NIW'
+		hyperG0.prior = type_prior;
+		% using column-vectors
+		hyperG0.mu = [0;0];
+		hyperG0.kappa = 1;
+		hyperG0.nu = 4;
+		hyperG0.lambda = eye(2);
 	case 'NIG'
-		hyperG0.prior = 'NIG';
+		hyperG0.prior = type_prior;
 		% this mean is used as prior for the coefficients for a line, 0, 0 means a horizontal line through the origin
 		% [0,1] means a horizontal line through 1, [1,0] means a diagonal line through the origin (y=x)
 		hyperG0.mu = [2;0];
 		hyperG0.a = 10; % > 0
 		hyperG0.b = 0.1;
 		hyperG0.Lambda = [ 1 0.5; 0.1 1];
-	case 'NIW'
-		hyperG0.prior = 'NIW';
-		% using column-vectors
-		hyperG0.mu = [0;0];
-		hyperG0.kappa = 1;
-		hyperG0.nu = 4;
-		hyperG0.lambda = eye(2);
+	case 'DPM_Seg'
+		hyperG0.prior = type_prior;
+		hyperG0.mu = [2;0];
+		hyperG0.a = 10; % > 0
+		hyperG0.b = 0.1;
+		hyperG0.Lambda = [ 1 0.5; 0.1 1];
+		% Hyper parameters for the Pareto priors
+		hyperG0.p_a = -1;
+		hyperG0.p_b = 1;
+		hyperG0.p_alpha = 2;
 	otherwise
 		error('Unknown prior ''%s''', type_prior);
 	end
@@ -170,53 +203,62 @@ for f = 1:length(fileList)
 	end
 
 	% we should somehow be able to compare the assignments with the ground truth
+	% c_est(i) is the index we assign to point pnts(i,end) where end is the
+	% value denoting the class
 	R=[c_est pnts(:,end)];
-	[AR,RI,MI,HI]=RandIndex(R(:,1), R(:,2));
+	% use standard metrics to check the performance of the assignment
+	[AR,RI,MI,HI]=RandIndex(R(:,1), R(:,2))
 
-	% for most likely cluster assignment, subsequently establish lines
-%	for i=1:c_est(ind(end))
-%		Pl=P(:,c_est==i);
-%		Pu=update_SS(Pl,hyperG0);
-%		number=size(Pl,2)
-%		mu=Pu.mu'
-%	end
-
-	% find MAP
-	for i=1:size(c_st, 2)
-		logjoint(i) = logjoint_dpm(P, c_st(:,i), alpha, hyperG0);
-	end
-	[~, indmap] = max(logjoint);
-	c_map = c_st(:, indmap);
-	if (doPlot)
-		figure;
-		plot(logjoint)
-		xlabel('MCMC iteration')
-		xlabel('log joint distribution')
-
-		% Plot MAP estimate of the partition
-		cmap = colormap;
-		figure
-		for i=1:size(P, 2)
-			plot(P(2,i), P(3,i), 'o', 'color', cmap(mod(10*c_map(i),63)+1,:), 'linewidth', 3);
-			hold on
+	if (findMAP)
+		% find MAP
+		for i=1:size(c_st, 2)
+			logjoint(i) = logjoint_dpm(P, c_st(:,i), alpha, hyperG0);
 		end
-		title('MAP estimate')
+		[~, indmap] = max(logjoint);
+		c_map = c_st(:, indmap);
+		if (doPlot)
+			figure;
+			plot(logjoint)
+			xlabel('MCMC iteration')
+			xlabel('log joint distribution')
+
+			% Plot MAP estimate of the partition
+			cmap = colormap;
+			figure
+			for i=1:size(P, 2)
+				plot(P(2,i), P(3,i), 'o', 'color', cmap(mod(10*c_map(i),63)+1,:), 'linewidth', 3);
+				hold on
+			end
+			title('MAP estimate')
+		end
+
+		% we should somehow be able to compare the assignments with the ground truth
+		RT=[c_map pnts(:,end)];
+		[AR,RI,MI,HI]=RandIndex(RT(:,1), RT(:,2))
+
+		clen=size(unique(c_map),1);
+		chist=zeros(2, clen);
+		[chist(1,:) chist(2,:)] = hist(c_map, unique(c_map));
+
+		mus=zeros(size(hyperG0.mu, 1), clen);
+		for i=1:clen
+			% subset of points belonging to non-empty cluster chist[i]
+			Pl=P(:,c_map==chist(2,i));
+			Pu=update_SS(Pl,hyperG0);
+			mus(:,i)=Pu.mu';
+		end
 	end
 
-	% we should somehow be able to compare the assignments with the ground truth
-	RT=[c_map pnts(:,end)];
-	[AR,RI,MI,HI]=RandIndex(RT(:,1), RT(:,2))
-
-	clen=size(unique(c_map),1);
-	chist=zeros(2, clen);
-	[chist(1,:) chist(2,:)] = hist(c_map, unique(c_map));
-
-	mus=zeros(size(hyperG0.mu, 1), clen);
-	for i=1:clen
-		% subset of points belonging to non-empty cluster chist[i]
-		Pl=P(:,c_map==chist(2,i));
-		Pu=update_SS(Pl,hyperG0);
-		mus(:,i)=Pu.mu';
+	fprintf(fid, 'data_file:\n%s\n', data_file);
+	fprintf(fid, 'AR:\n%f\n', AR);
+	fprintf(fid, 'RI:\n%f\n', RI);
+	fprintf(fid, 'MI:\n%f\n', MI);
+	fprintf(fid, 'HI:\n%f\n', HI);
+	if (findMAP)
+		fprintf(fid, 'chist:\n%f\n', chist);
+		fprintf(fid, 'mus:\n%f\n', mus);
+		fprintf(fid, 'RT:\n%f\n', RT);
 	end
-	save(output_inference_file, '-append', 'data_file', 'chist', 'AR', 'RI', 'MI', 'HI', 'mus', 'RT');
 end
+
+fclose(fid);

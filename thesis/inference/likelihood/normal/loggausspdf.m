@@ -1,3 +1,9 @@
+% -- Function: loggausspdf(x, mu, Sigma)
+%     Calculate Gaussian loglikelihood for x and mu with the same dimension.
+%     If there is only a single mu, it will be expanded to a vector the same
+%     size of x. So, this compares data items with Gaussian parameters row
+%     for row. It is not meant to calculate the likelihood for D=(x0,...,xN)
+%     for a single Gaussian.
 function logpdf = loggausspdf(x, mu, Sigma)
 
     [n, d] = size(x);

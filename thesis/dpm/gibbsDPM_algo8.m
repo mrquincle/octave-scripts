@@ -75,10 +75,11 @@ function c_st = gibbsDPM_algo8(y, hyperG0, alpha, niter, doPlot)
             U_R.Sigma(ind(j)) = R.Sigma;
         case 'DPM_Seg'
             R = sample_pdf(hyperG0);
-            U_R.mu(:, ind(j)) = R.mu;
-            U_R.Sigma(ind(j)) = R.Sigma;
-            U_R.a(emptyT(i)) = R.a;
-            U_R.b(emptyT(i)) = R.b;
+            U_R(ind(j)) = R;
+%            U_R.mu(:, ind(j)) = R.mu;
+ %           U_R.Sigma(ind(j)) = R.Sigma;
+  %          U_R.a(ind(j)) = R.a;
+   %         U_R.b(ind(j)) = R.b;
         end
     end
 
@@ -90,14 +91,15 @@ function c_st = gibbsDPM_algo8(y, hyperG0, alpha, niter, doPlot)
             m(c(k)) = m(c(k)) - 1;
 
             % Assign new table index
-            [c(k) update, R] = sample_c(m, alpha, y(:,k), hyperG0, U_R);
+            [c(k) update R] = sample_c(m, alpha, y(:,k), hyperG0, U_R);
             if (update)
-                U_R.mu(:, c(k)) = R.mu;
-                U_R.Sigma(c(k)) = R.Sigma;
+              U_R(c(k)) = R;
+%                U_R.mu(:, c(k)) = R.mu;
+%                U_R.Sigma(c(k)) = R.Sigma;
                 switch (hyperG0.prior)
                 case 'DPM_Seg'
-                    U_R.a(c(k)) = R.a;
-                    U_R.b(c(k)) = R.b;
+ %                   U_R.a(c(k)) = R.a;
+  %                  U_R.b(c(k)) = R.b;
                 end
             end
 
@@ -105,7 +107,7 @@ function c_st = gibbsDPM_algo8(y, hyperG0, alpha, niter, doPlot)
             m(c(k)) = m(c(k)) + 1;
 
             if doPlot==1
-                some_plot(y, hyperG0, U_R.mu, m, c, k, i, cmap)
+                some_plot(y, hyperG0, U_R, m, c, k, i, cmap)
             end
         end
         if i>niter/2
@@ -113,7 +115,7 @@ function c_st = gibbsDPM_algo8(y, hyperG0, alpha, niter, doPlot)
         end
 
         if doPlot==2
-            some_plot(y, hyperG0, U_R.mu, m, c, k, i, cmap)
+            some_plot(y, hyperG0, U_R, m, c, k, i, cmap)
         end
 
         print_clusters=true;
@@ -134,7 +136,7 @@ end
 function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_R)
 
     % Neal's m, the number of auxiliary variables
-    n_m=3;
+    n_m=8;
 
     % Find first n_m empty tables
     emptyT = find(m==0, n_m);
@@ -155,10 +157,11 @@ function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_R)
                 U_R.Sigma(emptyT(i)) = R.Sigma;
             case 'DPM_Seg' % Dirichlet Process Mixture of Segments
                 R = sample_pdf(hyperG0);
-                U_R.mu(:, emptyT(i)) = R.mu;
-                U_R.Sigma(emptyT(i)) = R.Sigma;
-                U_R.a(emptyT(i)) = R.a; % endpoint
-                U_R.b(emptyT(i)) = R.b; % endpoint
+                U_R(emptyT(i)) = R;
+%                U_R.mu(:, emptyT(i)) = R.mu;
+ %               U_R.Sigma(emptyT(i)) = R.Sigma;
+  %              U_R.a(emptyT(i)) = R.a; % endpoint
+   %             U_R.b(emptyT(i)) = R.b; % endpoint
             otherwise
         end
     end
@@ -167,16 +170,23 @@ function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_R)
     c = find(m~=0);
 
     % Calculate likelihood for every cluster
-    n = m(c).*likelihoods(hyperG0, repmat(z, 1, length(c)), U_R.mu(:, c)', U_R.Sigma(c)' )';
+    n = m(c).*likelihoods(hyperG0, repmat(z, 1, length(c)), U_R(c) )';
+%    n = m(c).*likelihoods(hyperG0, repmat(z, 1, length(c)), U_R.mu(:, c)', U_R.Sigma(c)' )';
 
     % Calculate b, as b=(N-1+alpha)/sum(n), of which the nominator (N-1+alpha)
     % gets cancelled out again, so we only require 1/const = 1/sum(n)
     const = sum(n);
 
-    % Sample cluster in n according to their weight n(c)
-    u=rand(1);
-    ind = find(cumsum(n/const)>=u, 1 );
-    K = c(ind);
+    if (const == 0)
+      % Sample random cluster
+      ind = unidrnd(length(c));
+      K = c(ind);
+    else
+      % Sample cluster in n according to their weight n(c)
+      u=rand(1);
+      ind = find(cumsum(n/const)>=u, 1 );
+      K = c(ind);
+    end
 
     % Set proposed tables to 0, except for table K
     setzero=setdiff(emptyT,K);
@@ -191,23 +201,38 @@ function [K, update, R] = sample_c(m, alpha, z, hyperG0, U_R)
 end
 
 % Plot mean values
-function some_plot(z, hyperG0, U_mu, m, c, k, i, cmap)
-    if strcmp(hyperG0.prior, 'NIG')
+function some_plot(z, hyperG0, U_R, m, c, k, i, cmap)
+    switch (hyperG0.prior)
+    case { 'NIG', 'DPM_Seg' }
         z=z(2:end,:);
     end
     ind=find(m);
     hold off;
     for j=1:length(ind)
+        mu = U_R(ind(j)).mu;
+        x_a(j) = U_R(ind(j)).a;
+        x_b(j) = U_R(ind(j)).b;
+        y_a(j) = [1 x_a(j)]*mu;
+        y_b(j) = [1 x_b(j)]*mu;
         plot(z(1,c==ind(j)),z(2,c==ind(j)),'.','color',cmap(mod(5*ind(j),63)+1,:), 'markersize', 15);
         hold on
-        plot(U_mu(1,ind(j)),U_mu(2,ind(j)),'.','color',cmap(mod(5*ind(j),63)+1,:), 'markersize', 30);
-        plot(U_mu(1,ind(j)),U_mu(2,ind(j)),'ok', 'linewidth', 2, 'markersize', 10);
+        plot(x_a(j),y_a(j),'.','color',cmap(mod(5*ind(j),63)+1,:), 'markersize', 30);
+        plot(x_a(j),y_a(j),'ok', 'linewidth', 2, 'markersize', 10);
+        plot(x_b(j),y_b(j),'.','color',cmap(mod(5*ind(j),63)+1,:), 'markersize', 30);
+        plot(x_b(j),y_b(j),'ok', 'linewidth', 2, 'markersize', 10);
+        %plot(mu(1),mu(2),'.','color',cmap(mod(5*ind(j),63)+1,:), 'markersize', 30);
+        %plot(mu(1),mu(2),'ok', 'linewidth', 2, 'markersize', 10);
     end
     plot(z(1,k),z(2,k),'or', 'linewidth', 3)
     title(['i=' num2str(i) ',  k=' num2str(k) ', Nb of clusters: ' num2str(length(ind))]);
     xlabel('X');
     ylabel('Y');
-    xlim([-1 1]*20);
-    ylim([-1 1]*20);
+    y_max=max([z(2,:),y_a,y_b, 25]);
+    y_min=min([z(2,:),y_a,y_b, -25]);
+    x_max=max([z(1,:),x_a,x_b, 25]);
+    x_min=min([z(1,:),x_a,x_b, -25]);
+    xlim([x_min x_max]);
+    ylim([y_min y_max]);
+
     pause(.01)
 end

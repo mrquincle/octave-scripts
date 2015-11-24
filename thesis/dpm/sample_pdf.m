@@ -7,8 +7,9 @@ function R = sample_pdf(S)
 	case 'NIG'
 		[R.mu, R.Sigma] = nigrnd(S);
 	case 'DPM_Seg'
-
+		[R.mu, R.Sigma] = nigrnd(S);
+		[R.a, R.b] = pareto2rnd(S);
 	otherwise
-		error("Unknown type of prior");
+		error('Unknown type of prior');
 	end
 end
