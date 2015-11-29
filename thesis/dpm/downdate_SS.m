@@ -17,6 +17,6 @@ function R = downdate_SS(z, S)
 	case 'NIG'
 		R = nigdowndate(z, S);
 	otherwise
-		error("Unknown type of prior");
+		error('Unknown type of prior');
 	end
 end

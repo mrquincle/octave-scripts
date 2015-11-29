@@ -16,7 +16,7 @@ function R = update_SS(z, S)
 	case 'NIG'
 		R = nigupdate(z, S);
 	otherwise
-		error("Unknown type of prior");
+		error('Unknown type of prior');
 	end
 
 end

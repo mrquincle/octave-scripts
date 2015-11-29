@@ -1,17 +1,33 @@
-% -- Function: likelihoods(S, data, R)
-%     The type of likelihood is indicated through S.prior
+% -- Function: likelihoods(method, data, R)
+%     The type of likelihood is indicated through method
 %     The data itself is ordered in such way that it can be compared one-on-one
 %     with the entries in R. So, parameters R(1) need to be compared with
 %     data(:,1)
-function n = likelihoods(S, data, R)
-	switch(S.prior)
+function n = likelihoods(method, data, R)
+	switch(method)
 	case 'NIW'
-		mu = R.mu(:, c)';
-		Sigma = R.Sigma(c)';
+		mu = reshape([R.mu],size(R(1).mu, 1), size(R(1).mu, 2) * length(R))';
+		Sigma = reshape([R.Sigma],size(R(1).Sigma, 1), size(R(1).Sigma, 2) * length(R))';
+		if (size(mu,1)==1)
+			copies=size(data, 2);
+			if (copies ~= 1)
+				% expand mu, Sigma, a, and b to fit data
+				mu = repmat(mu, copies, 1);
+				Sigma = repmat(Sigma, copies, 1);
+			end
+		end
 		n = exp(loggausspdf(data, mu, Sigma));
 	case 'NIG'
-		mu = R.mu(:, c)';
-		Sigma = R.Sigma(c)';
+		mu = reshape([R.mu],size(R(1).mu, 1), size(R(1).mu, 2) * length(R))';
+		Sigma = reshape([R.Sigma],size(R(1).Sigma, 1), size(R(1).Sigma, 2) * length(R))';
+		if (size(mu,1)==1)
+			copies=size(data, 2);
+			if (copies ~= 1)
+				% expand mu, Sigma, a, and b to fit data
+				mu = repmat(mu, copies, 1);
+				Sigma = repmat(Sigma, copies, 1);
+			end
+		end
 		y=data(end,:)';
 		X=data(1:end-1,:);
 		mu2=sum(X.*mu',1)';
@@ -21,6 +37,19 @@ function n = likelihoods(S, data, R)
 		Sigma = reshape([R.Sigma],size(R(1).Sigma, 1), size(R(1).Sigma, 2) * length(R))';
 		a = reshape([R.a],size(R(1).a, 1), size(R(1).a, 2) * length(R))';
 		b = reshape([R.b],size(R(1).b, 1), size(R(1).b, 2) * length(R))';
+
+		% if mu is size==1
+		if (size(mu,1)==1)
+			copies=size(data, 2);
+			if (copies ~= 1)
+				% expand mu, Sigma, a, and b to fit data
+				mu = repmat(mu, copies, 1);
+				Sigma = repmat(Sigma, copies, 1);
+				a = repmat(a, copies, 1);
+				b = repmat(b, copies, 1);
+			end
+		end
+
 		y=data(end,:)';
 		X=data(1:end-1,:);
 		mu2=sum(X.*mu',1)';

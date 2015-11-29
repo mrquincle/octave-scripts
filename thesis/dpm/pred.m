@@ -42,7 +42,7 @@ function out = pred(z, S)
 		XGX=X' * S.Lambda * X;
 		out = mvtpdf(y, X'*S.mu, S.b / S.a * (eye(size(XGX)) + XGX), nu);
 	otherwise
-		error("Unknown type of prior");
+		error('Unknown type of prior');
 	end
 
 end

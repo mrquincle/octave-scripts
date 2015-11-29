@@ -59,7 +59,6 @@ fprintf('Use prior ''%s''\n', type_prior);
 
 outfname='twolines';
 data_dir='../data/lines';
-%data_dir='/home/anne/myworkspace/aim/mrquincle/CornerDetectorModule/build_standard';
 data_glob=[data_dir '/*.data.txt'];
 
 output_dir='../output';
@@ -68,8 +67,6 @@ if ~exist(output_dir, 'dir')
 end
 
 timestamp=datestr(now,'yyyy mmm dd HH:MM:SS.FFF');
-%timestamp=strtrim(ctime(time()));
-%usec=num2str(gmtime(now()).usec)
 timestamp( timestamp == ' ' ) = '_';
 
 output_inference_file=[output_dir '/' outfname '.pnts.' timestamp '.data.txt'];
@@ -80,10 +77,11 @@ fileList = glob(data_glob);
 % Set some other configuration options
 
 % Number of iterations
-niter = 100;
+niter = 1000;
 
 % Type of plots (plot at every Gibbs step, or only after each point is updated)
-doPlot = 0;
+doPlot = 2;
+doPlotRaw = 0;
 
 % Get MAP estimate
 findMAP = 0;
@@ -123,7 +121,11 @@ for f = 1:length(fileList)
 	% Clear all variables when we get a new dataset, except for the ones we
 	% define here: the output file name, prior type, number of iterations,
 	% plotting variable, alpha, and the algorithm type
-	clearvars -except fileList output_inference_file fid type_prior f niter doPlot alpha type_algo findMAP
+	if (isOctave)
+		clear -x fileList output_inference_file fid type_prior f niter doPlot doPlotRaw alpha type_algo findMAP isOctave
+	else
+		clearvars -except fileList output_inference_file fid type_prior f niter doPlot doPlotRaw alpha type_algo findMAP isOctave
+	end
 
 	% Load the data from the dataset
 	data_file=fileList{f,1}
@@ -138,16 +140,18 @@ for f = 1:length(fileList)
 	P=[X0; P];
 
 	% Plot the raw dataset, the input for the algorithm
-	if (doPlot ~= 0)
-		y=P(end,:);
-		X=P(2:end-1,:);
+	if (doPlotRaw)
+		if (doPlot ~= 0)
+			y=P(end,:);
+			X=P(2:end-1,:);
 
-		figure('name', 'simulated data')
-		plot(X, y, '.')
-		xlabel('X')
-		ylabel('Y')
-		xlim([-1 1]*20);
-		ylim([-1 1]*20);
+			figure('name', 'simulated data')
+			plot(X, y, '.')
+			xlabel('X')
+			ylabel('Y')
+			xlim([-1 1]*20);
+			ylim([-1 1]*20);
+		end
 	end
 
 	% Set the parameters of the base distribution G0
@@ -163,20 +167,25 @@ for f = 1:length(fileList)
 		hyperG0.prior = type_prior;
 		% this mean is used as prior for the coefficients for a line, 0, 0 means a horizontal line through the origin
 		% [0,1] means a horizontal line through 1, [1,0] means a diagonal line through the origin (y=x)
-		hyperG0.mu = [2;0];
+		hyperG0.mu = [0;0];
 		hyperG0.a = 10; % > 0
 		hyperG0.b = 0.1;
-		hyperG0.Lambda = [ 1 0.5; 0.1 1];
+		hyperG0.Lambda = [ 1 0.2; 0.1 1]*0.02;
 	case 'DPM_Seg'
 		hyperG0.prior = type_prior;
 		hyperG0.mu = [2;0];
 		hyperG0.a = 10; % > 0
 		hyperG0.b = 0.1;
-		hyperG0.Lambda = [ 1 0.5; 0.1 1];
+		hyperG0.Lambda = [ 1 0.5; 0.1 0.8];
 		% Hyper parameters for the Pareto priors
 		hyperG0.p_a = -1;
 		hyperG0.p_b = 1;
-		hyperG0.p_alpha = 2;
+		hyperG0.p_alpha = 3;
+		% Hyper parameter for shift on x-axis
+		hyperG0.shift.mu = 0;
+		hyperG0.shift.kappa = 0.05;
+		hyperG0.shift.nu = 4;
+		hyperG0.shift.lambda = eye(1);
 	otherwise
 		error('Unknown prior ''%s''', type_prior);
 	end

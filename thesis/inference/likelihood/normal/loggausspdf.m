@@ -73,4 +73,6 @@ function logpdf = loggausspdf(x, mu, Sigma)
     xquad = sum(xstand.^2, 2);
     logpdf = -0.5*xquad - logSqrtDetSigma - d*log(2*pi)/2;
 
+    % Where Sigma is smaller than 0, set result to -Inf
+    logpdf(find(Sigma<=0))=-Inf;
 end
