@@ -6,6 +6,9 @@
 
 function c_st = gibbsDPM_algo3(y, hyperG0, alpha, niter, doPlot)
 
+    printf('Not used\n');
+    quit
+
     if doPlot
         figure('name','Gibbs sampling for DPM');
         colormap('default')

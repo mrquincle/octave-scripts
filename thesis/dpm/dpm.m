@@ -9,6 +9,7 @@
 %    unknown mean and unknown covariance matrix
 %  - the Normal inverse Gamma (NIG) prior for a Normal likelihood function with
 %    unknown mean and variance
+%  - A Dirichlet Process prior for segments.
 %
 % The choice which prior is used is through the variable type_prior, which
 % currently has the options 'NIG' and 'NIW'.
@@ -50,8 +51,8 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Set the prior to use
-prior = {'NIQ'; 'NIG'; 'DPM_Seg'};
-type_prior=prior{3};
+prior = {'NIW'; 'NIG'; 'DPM_Seg'};
+type_prior=prior{2};
 fprintf('Use prior ''%s''\n', type_prior);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -93,11 +94,13 @@ findMAP = 0;
 % called alpha. With a small alpha we will have only a few clusters. With alpha
 % very large we will have many clusters.
 alpha = 1;
+%alpha = 0.1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % The inference method
 algorithm = {'BMQ'; 'CRP'; 'collapsedCRP'; 'slicesampler'; 'auxiliaryvars'};
 type_algo = algorithm{5};
+type_algo = algorithm{2};
 fprintf('Use algorithm ''%s''\n', type_algo);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -171,6 +174,7 @@ for f = 1:length(fileList)
 		hyperG0.a = 10; % > 0
 		hyperG0.b = 0.1;
 		hyperG0.Lambda = [ 1 0.2; 0.1 1]*0.02;
+		%hyperG0.Lambda = [ 1 0.5; 0.1 0.8];
 	case 'DPM_Seg'
 		hyperG0.prior = type_prior;
 		hyperG0.mu = [2;0];

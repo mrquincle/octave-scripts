@@ -155,7 +155,7 @@ function some_plot(zt, theta_mu, theta_Sigma, k, i, n, cmap)
     hold off
     z=zt(2:end,:);
     if (print_clusters)
-       printf("--------------- New plot --------------\n");
+       printf('--------------- New plot --------------\n');
     end
     % ugly... picks just one dimension and sorts... but yeah, it's only for visualization, so who cares? :-)
     ind = unique(theta_mu(1, :));
