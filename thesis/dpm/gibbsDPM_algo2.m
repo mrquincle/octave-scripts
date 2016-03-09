@@ -192,5 +192,12 @@ function some_plot(z, hyperG0, U_R, m, c, k, i, cmap)
     ylabel('Y');
     xlim([-1 1]*20);
     ylim([-1 1]*20);
-    pause(.01)
+    %pause(.01)
+
+    save_plot=true;
+    if (save_plot)
+        name=sprintf('output/image%04i.jpg', i);
+        name
+        print(name, '-djpg');
+    end
 end

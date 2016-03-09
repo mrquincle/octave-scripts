@@ -79,6 +79,7 @@ fileList = glob(data_glob);
 
 % Number of iterations
 niter = 1000;
+niter = 200;
 
 % Type of plots (plot at every Gibbs step, or only after each point is updated)
 doPlot = 2;
@@ -119,7 +120,8 @@ fprintf(fid, 'type_algo:\n%s\n', type_algo);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % We perform inference over a list of datasets
 
-for f = 1:length(fileList)
+%for f = 1:length(fileList)
+for f = 2:2
 
 	% Clear all variables when we get a new dataset, except for the ones we
 	% define here: the output file name, prior type, number of iterations,
