@@ -1,5 +1,10 @@
+#!/usr/bin/octave -qf
+
+% Not a function file
+1;
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% File to generate N lines with a specified number of outliers and Gaussian noise
+% File to generate N objects with a specified number of outliers and Gaussian noise
 %
 % Author: Anne van Rossum
 % Date: Jul, 2014
@@ -13,6 +18,52 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Clear all previous sessions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+close all
+clear -x input_file output_file
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Command line options
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+arg_list = argv ();
+
+if (nargin > 1) 
+	input_file = arg_list{1};
+	output_file = arg_list{2};
+else
+	fprintf('Usage: dpmobjectrnd input output [skip_graphs]\n');
+end
+
+if (~exist("input_file"))
+	fprintf('Error: Variable input_file not set\n');
+	return
+end
+
+if (~exist("output_file"))
+	fprintf('Error: Variable output_file not set\n');
+	return
+end
+
+if (~exist(input_file))
+	fprintf('Error: Input file does not exist\n');
+	return
+end
+
+skip_graphs = false;
+
+if (nargin == 3) 
+	if (arg_list{3} == 'skip_graphs') 
+		skip_graphs = true;
+	end
+end
+
+graph_file=[output_file '.png'];
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Default configuration options
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,29 +74,30 @@ warning ('error', 'Octave:broadcast');
 isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
 
 % include path for the Chinese Restaurant Process algorithm and the Normal-Inverse Wishart Random generator
-addpath('/home/anne/myworkspace/octave/nonparam_workshop')
-addpath('/home/anne/myworkspace/octave/nonparam_workshop/private')
+addpath(genpath([pwd '/util']), 1);
+addpath(genpath([pwd '/shapes']), 1);
 
 if (~isOctave)
 	% rehash, or changes to the configuration from config file will not be applied
 	rehash
 end
 
+if (!skip_graphs)
+set(gca(), "defaultlinelinewidth", 4.0);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Dependencies
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+pkg load statistics
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load configuration from file
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-fname='dpmobject1';
-config_dir='config';
-
-data_dir='data';
-% Create data directory
-if (~exist(data_dir))
-	mkdir(data_dir);
-end
-
-input_file=[config_dir '/' fname '_config.m'];
-output_file=[data_dir '/' fname '.pnts.data'];
+%input_file=[config_dir '/' fname '_config.m'];
+%output_file=[data_dir '/' fname '.pnts.data'];
 
 if (~isOctave)
 	% Matlab requires explicit clearing or else config file is not updated after a change
@@ -84,7 +136,7 @@ fprintf('Number of clusters: %i\n', S);
 mu=zeros(dim,S);
 covar=zeros(dim,dim,S);
 
-ls=zeros(param1.dim,S);
+lss=zeros(param1.dim,S);
 
 lp1=zeros(dim,S);
 lp1_covar=zeros(dim,dim,S);
@@ -95,17 +147,16 @@ P=zeros(n,dim);
 Y=zeros(n,dim);
 
 % We add an additional CRP to get the same angle for line segments with a probability larger than 0, indicating 
-% correlations coming from higher-level objects, such as squares and alike.
-[s_p s_cs s_c s_pb] = crprnd(param1.alpha,S);
-SC=s_c;
-fprintf('Number of super clusters: %i\n', SC);
+% orrelations coming from higher-level objects, such as squares and alike.
+[super_partitions super_clustersize super_clusters super_partition_bins] = crprnd(param1.alpha,S);
+fprintf('Number of super clusters: %i\n', super_clusters);
 
 % Normally distributed
-s_mu=zeros(param1.dim,SC);
-s_covar=zeros(param1.dim,param1.dim,SC);
+s_mu=zeros(param1.dim,super_clusters);
+s_covar=zeros(param1.dim,param1.dim,super_clusters);
 
 % Pick the properties of the objects
-for i=1:SC
+for i=1:super_clusters
 	[s_mu(:,i) s_covar(:,:,i)]=normalinvwishrnd(hyper1);
 end
 
@@ -123,9 +174,33 @@ for i=1:S
 	%[lp(:,i) lp_covar(:,:,i)]=normalinvwishrnd(hyper);
 
 	% Get the super-cluster
-	sc = s_p(i);
+	super_cluster = super_partitions(i);
+
 	% Get the angle and two lengths for 2D, get three angles and two lengths for 3D
-	ls(:,i)=s_mu(:,sc);
+	lss(:,i)=s_mu(:,super_cluster);
+
+	% create rectangles, not parallelograms
+	if (test_same_angle)
+		switch(dim)
+		case 2
+			lss(1,:) = same_angle;
+		case 3
+			lss(1,:) = same_angle;
+			lss(2,:) = same_angle;
+		end
+	end
+
+	if (test_same_length) 
+		switch(dim)
+		case 2
+			lss(2,:) = same_length;
+			lss(3,:) = same_length;
+		case 3
+			lss(3,:) = same_length;
+			lss(4,:) = same_length;
+			lss(5,:) = same_length;
+		end
+	end
 end
 
 % For each pair of (angle,distance) calculate end point
@@ -133,33 +208,34 @@ switch(dim)
 case 2
 	% We assume order (angle, length1, length2), we make a 'square' from it, actually a parallelogram by picking two
 	% other points. Then all points will be between the middle \mu and points \mu+-lp1 and \mu+-lp2.
-	lp1(:,:)=[ 	(ls(2,:).*cos(ls(1,:))); 
-			(ls(2,:).*sin(ls(1,:)))];
-	lp2(:,:)=[ 	(ls(3,:).*cos(ls(1,:)+pi/2 )); 
-			(ls(3,:).*sin(ls(1,:)+pi/2 ))];
+	lp1(:,:)=[ 	(lss(2,:).*cos(lss(1,:))); 
+			(lss(2,:).*sin(lss(1,:)))];
+	lp2(:,:)=[ 	(lss(3,:).*cos(lss(1,:)+pi/2 )); 
+			(lss(3,:).*sin(lss(1,:)+pi/2 ))];
 case 3
 	switch (object_dim) 
 	case 3
 		% We assume order (theta, phi, r1, r2, r3, alpha2, alpha2)
 		% We now move a point 
-		lp1(:,:)=[ 	(ls(3,:).*sin(ls(2,:)).*cos(ls(1,:))); 
-				(ls(3,:).*sin(ls(2,:)).*sin(ls(1,:))); 
-				(ls(3,:).*cos(ls(2,:)))];
-		lp2(:,:)=[ 	(ls(4,:).*sin(ls(2,:)).*cos(ls(1,:)+pi/2)); 
-				(ls(4,:).*sin(ls(2,:)).*sin(ls(1,:)+pi/2)); 
-				(ls(4,:).*cos(ls(2,:)))];
-		lp3(:,:)=[ 	(ls(5,:).*sin(ls(2,:)+pi/2).*cos(ls(1,:))); 
-				(ls(5,:).*sin(ls(2,:)+pi/2).*sin(ls(1,:))); 
-				(ls(5,:).*cos(ls(2,:)+pi/2))];
+		lp1(:,:)=[ 	(lss(3,:).*sin(lss(2,:)).*cos(lss(1,:))); 
+				(lss(3,:).*sin(lss(2,:)).*sin(lss(1,:))); 
+				(lss(3,:).*cos(lss(2,:)))];
+		lp2(:,:)=[ 	(lss(4,:).*sin(lss(2,:)).*cos(lss(1,:)+pi/2)); 
+				(lss(4,:).*sin(lss(2,:)).*sin(lss(1,:)+pi/2)); 
+				(lss(4,:).*cos(lss(2,:)))];
+		lp3(:,:)=[ 	(lss(5,:).*sin(lss(2,:)+pi/2).*cos(lss(1,:))); 
+				(lss(5,:).*sin(lss(2,:)+pi/2).*sin(lss(1,:))); 
+				(lss(5,:).*cos(lss(2,:)+pi/2))];
+
 	case 2
 		% We assume order (theta, phi, r1, r2, alpha2)
 		% We now move a point 
-		lp1(:,:)=[ 	(ls(3,:).*sin(ls(2,:)).*cos(ls(1,:))); 
-				(ls(3,:).*sin(ls(2,:)).*sin(ls(1,:))); 
-				(ls(3,:).*cos(ls(2,:)))];
-		lp2(:,:)=[ 	(ls(4,:).*sin(ls(2,:)).*cos(ls(1,:)+pi/2)); 
-				(ls(4,:).*sin(ls(2,:)).*sin(ls(1,:)+pi/2)); 
-				(ls(4,:).*cos(ls(2,:)))];
+		lp1(:,:)=[ 	(lss(3,:).*sin(lss(2,:)).*cos(lss(1,:))); 
+				(lss(3,:).*sin(lss(2,:)).*sin(lss(1,:))); 
+				(lss(3,:).*cos(lss(2,:)))];
+		lp2(:,:)=[ 	(lss(4,:).*sin(lss(2,:)).*cos(lss(1,:)+pi/2)); 
+				(lss(4,:).*sin(lss(2,:)).*sin(lss(1,:)+pi/2)); 
+				(lss(4,:).*cos(lss(2,:)))];
 	end
 end
 
@@ -180,6 +256,7 @@ for i=1:n
 		sn=randn(1,object_dim);
 	case 'uniform'
 		% points on line segment are generated uniformly
+		% this doesn't really work nicely if the rectangles have lengths that differ in the x and y directions
 		sn=2*rand(1,object_dim)-1;
 	end
 
@@ -209,34 +286,49 @@ for i=1:n
 	case 2
 		P(i,:)=mu(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + chol(covar(:,:,c))' * randn(dim,1);
 	case 3
-		P(i,:)=mu(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + lp3(:,c)*sn(3) + chol(covar(:,:,c))' * randn(dim,1);
+		% Just forget all of the above, just sample cubes...
+		e = sample_cube(lss(3,c),lss(4,c),lss(5,c)) - [lss(3,c) lss(4,c) lss(5,c)]/2;
+		P(i,:) = sample_line(e)' + mu(:,c) + chol(covar(:,:,c))' * randn(dim,1);
+	%	P(i,:)=mu(:,c) + lp1(:,c)*sn(1) + lp2(:,c)*sn(2) + lp3(:,c)*sn(3) + chol(covar(:,:,c))' * randn(dim,1);
 	end
 	Y(i,:)=c;
 end
 
-% Invert matrix for easy plotting
+% Transpose matrix for easy plotting
 P=P';
 Y=Y';
 
 % Scale points
-scale=100
+scale=100;
 P=P./scale;
 mu=mu./scale;
 
 switch (dim)
 case 2
-	% In the 2D case we plot a bit more, e.g. the 'true' lines that generate the points as well as the mean values.
-	plot(P(1,:),P(2,:),'.')
 	dlmwrite(output_file, [P(1,:)' P(2,:)', Y(1,:)'], 'delimiter', '\t', 'precision', 10);
-	hold on
-	% Print mean values as a red circle
-	plot(mu(1,:),mu(2,:),'or');
 case 3
-	plot3(P(1,:),P(2,:),P(3,:),'.')
-	hold on
-	% Print mean values as a red circle
-	plot3(mu(1,:),mu(2,:),mu(3,:),'or');
 	dlmwrite(output_file, [P(1,:)' P(2,:)' P(3,:)', Y(1,:)'], 'delimiter', '\t', 'precision', 10);
 end
 
+if (!skip_graphs)
+	switch (dim)
+	case 2
+		% In the 2D case we plot a bit more, e.g. the 'true' lines that generate the points as well as the mean values.
+		plot(P(1,:),P(2,:),'.', 'MarkerSize', 12)
+		dlmwrite(output_file, [P(1,:)' P(2,:)', Y(1,:)'], 'delimiter', '\t', 'precision', 10);
+		hold on
+		% Print mean values as a red circle
+		plot(mu(1,:),mu(2,:),'or');
+	case 3
+		plot3(P(1,:),P(2,:),P(3,:),'.')
+		hold on
+		% Print mean values as a red circle
+		plot3(mu(1,:),mu(2,:),mu(3,:),'or');
+		dlmwrite(output_file, [P(1,:)' P(2,:)' P(3,:)', Y(1,:)'], 'delimiter', '\t', 'precision', 10);
+	end
 
+	axis equal
+
+	print(graph_file, "-dpng")
+
+end
